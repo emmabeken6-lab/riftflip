@@ -3,7 +3,7 @@ from discord import app_commands
 from discord.ext import commands
 
 
-SITE_URL = "https://d884c1c1-d9a5-421a-a4dd-0c386292c491-00-3shwy7ie5x5zs.janeway.replit.dev"
+SITE_URL = "https://60357c6f-b468-4fb2-a9b3-ec367e58ba1b-00-23yngg0wgzwcp.spock.replit.dev"
 SITE_API = f"{SITE_URL}/api"
 CONNECTED = True
 

@@ -147,7 +147,7 @@ class Bot(commands.Bot):
         return web.json_response(safe_config, headers=self._cors_headers())
 
     async def start_web_server(self):
-        port = int(os.environ.get("BOT_API_PORT", 5000))
+        port = int(os.environ.get("BOT_API_PORT", 5001))
         runner = web.AppRunner(self.web_app)
         await runner.setup()
         site = web.TCPSite(runner, "0.0.0.0", port)
