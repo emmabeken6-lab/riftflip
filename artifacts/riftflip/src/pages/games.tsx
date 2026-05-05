@@ -1,10 +1,11 @@
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
+import { Coins, Flame, Bomb } from "lucide-react";
 
 const GAMES = [
-  { slug: "coinflip", name: "Coinflip", icon: "🪙" },
-  { slug: "jackpot", name: "Jackpot", icon: "🔥" },
-  { slug: "minefield", name: "Minefield", icon: "💣" },
+  { slug: "coinflip", name: "Coinflip", Icon: Coins },
+  { slug: "jackpot", name: "Jackpot", Icon: Flame },
+  { slug: "minefield", name: "Minefield", Icon: Bomb },
 ];
 
 export default function Games() {
@@ -56,14 +57,17 @@ export default function Games() {
                 <div
                   className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
                   style={{
-                    fontSize: "20px",
                     background: isActive
                       ? "rgba(233,124,46,0.18)"
                       : "rgba(255,255,255,0.06)",
                     border: `1px solid ${isActive ? "rgba(233,124,46,0.38)" : "rgba(255,255,255,0.08)"}`,
                   }}
                 >
-                  {game.icon}
+                  <game.Icon
+                    size={20}
+                    strokeWidth={1.8}
+                    style={{ color: isActive ? "#f0a060" : "#c4c4d4" }}
+                  />
                 </div>
 
                 <div className="flex-1 min-w-0">

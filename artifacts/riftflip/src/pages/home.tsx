@@ -1,12 +1,12 @@
 import { Link } from "wouter";
 import { motion } from "framer-motion";
-import { ChevronRight, Sparkles, Trophy, Wallet } from "lucide-react";
+import { ChevronRight, Sparkles, Trophy, Wallet, Coins, Flame, Bomb } from "lucide-react";
 import riftflipLogo from "@assets/5d919577b49f5f0010fa8d0f_1777874058058.png";
 
 const GAMES = [
-  { slug: "coinflip", name: "Coinflip", icon: "🪙" },
-  { slug: "jackpot", name: "Jackpot", icon: "🔥" },
-  { slug: "minefield", name: "Minefield", icon: "💣" },
+  { slug: "coinflip", name: "Coinflip", Icon: Coins },
+  { slug: "jackpot", name: "Jackpot", Icon: Flame },
+  { slug: "minefield", name: "Minefield", Icon: Bomb },
 ];
 
 export default function Home() {
@@ -178,7 +178,7 @@ export default function Home() {
                     border: "1px solid rgba(139,92,246,0.2)",
                   }}
                 >
-                  <span className="text-3xl">{game.icon}</span>
+                  <game.Icon size={28} strokeWidth={1.6} style={{ color: "#a78bfa" }} />
                   <span className="text-white text-xs font-bold text-center">{game.name}</span>
                 </div>
               </Link>
