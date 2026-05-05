@@ -1,10 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation, Link } from "wouter";
 import { Wallet, LogIn, LogOut, User, ChevronDown, Trophy, Gamepad2 } from "lucide-react";
-import { useUser, useClerk, Show } from "@clerk/react";
+import { useAuth, avatarUrl } from "@/contexts/AuthContext";
 import riftflipLogo from "@assets/5d919577b49f5f0010fa8d0f_1777874058058.png";
-
-const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 const DiscordIcon = () => (
   <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5">
@@ -22,13 +20,9 @@ const navLinks = [
 
 export default function TopNav() {
   const [location] = useLocation();
-  const { user, isLoaded } = useUser();
-  const { signOut } = useClerk();
+  const { user, isSignedIn, isLoading, refetch } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-
-  const discordAccount = user?.externalAccounts?.find((a) => a.provider === "discord");
-  const displayName = discordAccount?.username ?? user?.username ?? user?.firstName ?? "Account";
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -38,6 +32,12 @@ export default function TopNav() {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [menuOpen]);
+
+  const handleLogout = async () => {
+    setMenuOpen(false);
+    await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+    refetch();
+  };
 
   return (
     <header
@@ -64,7 +64,6 @@ export default function TopNav() {
             <Link
               key={link.href}
               href={link.href}
-              data-testid={`nav-link-${link.label.toLowerCase()}`}
               className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
               style={{ color: isActive ? "#c4b5fd" : "#666", background: isActive ? "#1e1e1e" : "transparent" }}
             >
@@ -76,115 +75,91 @@ export default function TopNav() {
 
       {/* Right side */}
       <div className="flex items-center gap-3">
-        <Show when="signed-in">
-          {/* Balance */}
-          <div
-            className="flex items-center gap-2 px-3 py-2 rounded-lg"
-            style={{ background: "#1e1e1e", border: "1px solid #2a2a2a" }}
-            data-testid="balance-display"
-          >
-            <Wallet size={13} className="text-slate-500" />
-            <span className="text-sm font-bold text-slate-300">R$ 0</span>
-          </div>
-
-          {/* User dropdown */}
-          <div className="relative" ref={menuRef}>
-            <button
-              onClick={() => setMenuOpen((v) => !v)}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors hover:bg-[#1e1e1e]"
-              style={{ background: menuOpen ? "#1e1e1e" : "#191919", border: "1px solid #2a2a2a" }}
-              data-testid="user-menu-btn"
+        {!isLoading && isSignedIn && user ? (
+          <>
+            {/* Balance pill */}
+            <div
+              className="flex items-center gap-2 px-3 py-2 rounded-lg"
+              style={{ background: "#1e1e1e", border: "1px solid #2a2a2a" }}
             >
-              {isLoaded && user?.imageUrl ? (
-                <div className="relative">
-                  <img src={user.imageUrl} alt={displayName} className="w-7 h-7 rounded-full object-cover" />
-                  {discordAccount && (
-                    <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center" style={{ background: "#5865F2", border: "1.5px solid #151515" }}>
-                      <DiscordIcon />
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ background: "#2a2a2a" }}>
-                  <User size={13} className="text-slate-400" />
-                </div>
-              )}
-              <span className="text-slate-300 text-sm font-medium max-w-24 truncate">{displayName}</span>
-              <ChevronDown size={13} className="text-slate-600" style={{ transform: menuOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
-            </button>
+              <Wallet size={13} className="text-slate-500" />
+              <span className="text-sm font-bold text-slate-300">R$ {user.balance.toLocaleString()}</span>
+            </div>
 
-            {/* Dropdown */}
-            {menuOpen && (
-              <div
-                className="absolute right-0 top-full mt-2 rounded-xl overflow-hidden z-50 min-w-48"
-                style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", boxShadow: "0 8px 24px rgba(0,0,0,0.5)" }}
+            {/* User dropdown */}
+            <div className="relative" ref={menuRef}>
+              <button
+                onClick={() => setMenuOpen((v) => !v)}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors hover:bg-[#1e1e1e]"
+                style={{ background: menuOpen ? "#1e1e1e" : "#191919", border: "1px solid #2a2a2a" }}
               >
-                {/* User header */}
-                <div className="px-4 py-3 flex items-center gap-3" style={{ borderBottom: "1px solid #222" }}>
-                  {user?.imageUrl ? (
-                    <img src={user.imageUrl} alt={displayName} className="w-8 h-8 rounded-full object-cover" />
-                  ) : (
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center font-black" style={{ background: "#2a2a2a" }}>
-                      <User size={14} className="text-slate-400" />
-                    </div>
-                  )}
-                  <div className="min-w-0">
-                    <p className="text-white font-semibold text-sm truncate">{displayName}</p>
-                    {discordAccount && (
-                      <div className="flex items-center gap-1">
-                        <DiscordIcon />
-                        <span className="text-xs text-slate-500">Discord</span>
-                      </div>
-                    )}
+                <div className="relative">
+                  <img src={avatarUrl(user)} alt={user.username} className="w-7 h-7 rounded-full object-cover" />
+                  <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center" style={{ background: "#5865F2", border: "1.5px solid #151515" }}>
+                    <DiscordIcon />
                   </div>
                 </div>
+                <span className="text-slate-300 text-sm font-medium max-w-28 truncate">{user.username}</span>
+                <ChevronDown size={13} className="text-slate-600" style={{ transform: menuOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
+              </button>
 
-                {/* Links */}
-                {[
-                  { label: "View Profile", icon: User, href: "/profile" },
-                  { label: "Wallet", icon: Wallet, href: "/wallet" },
-                  { label: "Rewards", icon: Trophy, href: "/rewards" },
-                  { label: "Games", icon: Gamepad2, href: "/games" },
-                ].map((item, i) => (
-                  <Link key={item.href} href={item.href} onClick={() => setMenuOpen(false)}>
-                    <div
-                      className="flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors hover:bg-[#222]"
-                      style={{ borderBottom: i < 3 ? "1px solid #1e1e1e" : "none" }}
-                    >
-                      <item.icon size={14} className="text-slate-500" />
-                      <span className="text-slate-300 text-sm">{item.label}</span>
+              {menuOpen && (
+                <div
+                  className="absolute right-0 top-full mt-2 rounded-xl overflow-hidden z-50 min-w-48"
+                  style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", boxShadow: "0 8px 24px rgba(0,0,0,0.5)" }}
+                >
+                  <div className="px-4 py-3 flex items-center gap-3" style={{ borderBottom: "1px solid #222" }}>
+                    <img src={avatarUrl(user)} alt={user.username} className="w-8 h-8 rounded-full object-cover" />
+                    <div className="min-w-0">
+                      <p className="text-white font-semibold text-sm truncate">{user.username}</p>
+                      <div className="flex items-center gap-1">
+                        <DiscordIcon />
+                        <span className="text-xs text-slate-500">Discord · #{user.discriminator}</span>
+                      </div>
                     </div>
-                  </Link>
-                ))}
+                  </div>
 
-                {/* Sign out */}
-                <div style={{ borderTop: "1px solid #222" }}>
-                  <button
-                    onClick={() => { setMenuOpen(false); signOut({ redirectUrl: basePath || "/" }); }}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-[#1e1010]"
-                    data-testid="sign-out-btn"
-                  >
-                    <LogOut size={14} className="text-red-500" />
-                    <span className="text-red-500 text-sm">Sign Out</span>
-                  </button>
+                  {[
+                    { label: "View Profile", icon: User, href: "/profile" },
+                    { label: "Wallet", icon: Wallet, href: "/wallet" },
+                    { label: "Rewards", icon: Trophy, href: "/rewards" },
+                    { label: "Games", icon: Gamepad2, href: "/games" },
+                  ].map((item, i) => (
+                    <Link key={item.href} href={item.href} onClick={() => setMenuOpen(false)}>
+                      <div
+                        className="flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors hover:bg-[#222]"
+                        style={{ borderBottom: i < 3 ? "1px solid #1e1e1e" : "none" }}
+                      >
+                        <item.icon size={14} className="text-slate-500" />
+                        <span className="text-slate-300 text-sm">{item.label}</span>
+                      </div>
+                    </Link>
+                  ))}
+
+                  <div style={{ borderTop: "1px solid #222" }}>
+                    <button
+                      onClick={handleLogout}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-[#1e1010]"
+                    >
+                      <LogOut size={14} className="text-red-500" />
+                      <span className="text-red-500 text-sm">Sign Out</span>
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
-        </Show>
-
-        <Show when="signed-out">
+              )}
+            </div>
+          </>
+        ) : !isLoading ? (
           <Link href="/sign-in">
             <button
               className="flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-bold transition-all hover:opacity-90"
               style={{ background: "#7c3aed", color: "#fff" }}
-              data-testid="sign-in-btn"
             >
               <LogIn size={14} />
               Sign In
             </button>
           </Link>
-        </Show>
+        ) : null}
       </div>
     </header>
   );

@@ -1,15 +1,60 @@
 import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
-import { clerkMiddleware } from "@clerk/express";
-import { publishableKeyFromHost } from "@clerk/shared/keys";
-import {
-  CLERK_PROXY_PATH,
-  clerkProxyMiddleware,
-  getClerkProxyHost,
-} from "./middlewares/clerkProxyMiddleware";
+import session from "express-session";
+import passport from "passport";
+import { Strategy as DiscordStrategy } from "passport-discord";
+import MemoryStore from "memorystore";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import "./types/passport.d.ts";
+
+const MemoryStoreSession = MemoryStore(session);
+
+const DISCORD_CLIENT_ID = process.env["DISCORD_CLIENT_ID"] ?? "";
+const DISCORD_CLIENT_SECRET = process.env["DISCORD_CLIENT_SECRET"] ?? "";
+const SESSION_SECRET = process.env["SESSION_SECRET"] ?? "riftflip-session-secret-change-me";
+
+const domains = (process.env["REPLIT_DOMAINS"] ?? "").split(",");
+const primaryDomain = domains[0]?.trim();
+const port = process.env["PORT"] ?? "3001";
+
+const callbackURL = primaryDomain
+  ? `https://${primaryDomain}/api/auth/discord/callback`
+  : `http://localhost:${port}/api/auth/discord/callback`;
+
+type DiscordUser = Express.User;
+
+passport.use(
+  new DiscordStrategy(
+    {
+      clientID: DISCORD_CLIENT_ID,
+      clientSecret: DISCORD_CLIENT_SECRET,
+      callbackURL,
+      scope: ["identify", "email"],
+    },
+    (_accessToken, _refreshToken, profile, done) => {
+      const user: DiscordUser = {
+        id: profile.id,
+        username: profile.username,
+        discriminator: profile.discriminator ?? "0",
+        avatar: profile.avatar ?? null,
+        email: profile.email ?? null,
+        balance: 0,
+        joinedAt: new Date().toISOString(),
+      };
+      return done(null, user);
+    },
+  ),
+);
+
+passport.serializeUser((user, done) => {
+  done(null, user);
+});
+
+passport.deserializeUser((user: DiscordUser, done) => {
+  done(null, user);
+});
 
 const app: Express = express();
 
@@ -18,35 +63,42 @@ app.use(
     logger,
     serializers: {
       req(req) {
-        return {
-          id: req.id,
-          method: req.method,
-          url: req.url?.split("?")[0],
-        };
+        return { id: req.id, method: req.method, url: req.url?.split("?")[0] };
       },
       res(res) {
-        return {
-          statusCode: res.statusCode,
-        };
+        return { statusCode: res.statusCode };
       },
     },
   }),
 );
 
-app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
+app.use(
+  cors({
+    credentials: true,
+    origin: true,
+  }),
+);
 
-app.use(cors({ credentials: true, origin: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use(
-  clerkMiddleware((req) => ({
-    publishableKey: publishableKeyFromHost(
-      getClerkProxyHost(req) ?? "",
-      process.env.CLERK_PUBLISHABLE_KEY,
-    ),
-  })),
+  session({
+    store: new MemoryStoreSession({ checkPeriod: 86400000 }),
+    secret: SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      secure: process.env["NODE_ENV"] === "production",
+      sameSite: process.env["NODE_ENV"] === "production" ? "none" : "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    },
+  }),
 );
+
+app.use(passport.initialize());
+app.use(passport.session());
 
 app.use("/api", router);
 

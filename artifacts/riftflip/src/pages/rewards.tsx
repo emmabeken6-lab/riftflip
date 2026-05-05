@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { useUser } from "@clerk/react";
+import { useAuth } from "@/contexts/AuthContext";
 import { Crown, Gift, Star, Trophy, Copy, LogIn } from "lucide-react";
 
 const VIP_TIERS = [
@@ -15,8 +15,8 @@ const DAILY_REWARDS = [100, 200, 350, 500, 750, 1200, 2500];
 
 export default function Rewards() {
   const [copied, setCopied] = useState(false);
-  const { isSignedIn, user, isLoaded } = useUser();
-  const referralCode = isSignedIn ? `RIFT-${(user?.id ?? "").slice(-8).toUpperCase()}` : "RIFT-????????";
+  const { isSignedIn, isLoading, user } = useAuth();
+  const referralCode = isSignedIn && user ? `RIFT-${user.id.slice(-8).toUpperCase()}` : "RIFT-????????";
 
   const copyReferral = () => {
     if (!isSignedIn) return;
@@ -26,43 +26,29 @@ export default function Rewards() {
   };
 
   return (
-    <div className="min-h-screen px-3 py-4" style={{ background: "#111" }} data-testid="rewards-page">
+    <div className="min-h-screen px-3 py-4" style={{ background: "#111" }}>
       <div className="mb-5">
         <h1 className="text-xl font-black text-white mb-0.5 flex items-center gap-2">
           <Crown size={20} className="text-yellow-500" />
           Rewards
         </h1>
         <p className="text-slate-500 text-sm">
-          {isSignedIn ? `Hey, ${user?.username ?? user?.firstName ?? "Player"}` : "Sign in to claim bonuses"}
+          {isSignedIn && user ? `Hey, ${user.username}` : "Sign in to claim bonuses"}
         </p>
       </div>
 
-      {/* Sign-in notice */}
-      {isLoaded && !isSignedIn && (
-        <div
-          className="mb-5 p-4 rounded-xl flex items-center gap-3"
-          style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}
-          data-testid="signin-notice"
-        >
+      {!isLoading && !isSignedIn && (
+        <div className="mb-5 p-4 rounded-xl flex items-center gap-3" style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}>
           <LogIn size={16} className="text-slate-500 flex-shrink-0" />
           <p className="text-slate-400 text-sm flex-1">Sign in to track your streak and claim rewards.</p>
           <Link href="/sign-in">
-            <button
-              className="px-4 py-2 rounded-lg text-sm font-bold text-white transition-all hover:opacity-90"
-              style={{ background: "#7c3aed" }}
-            >
-              Sign In
-            </button>
+            <button className="px-4 py-2 rounded-lg text-sm font-bold text-white transition-all hover:opacity-90" style={{ background: "#7c3aed" }}>Sign In</button>
           </Link>
         </div>
       )}
 
       {/* Daily Login */}
-      <section
-        className="mb-5 p-5 rounded-xl"
-        style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}
-        data-testid="daily-streak"
-      >
+      <section className="mb-5 p-5 rounded-xl" style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}>
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-white font-bold">Daily Login</h2>
@@ -89,20 +75,12 @@ export default function Rewards() {
           ))}
         </div>
         {isSignedIn ? (
-          <button
-            className="w-full py-3 rounded-lg text-white font-bold text-sm transition-all hover:opacity-90"
-            style={{ background: "#7c3aed" }}
-            data-testid="claim-daily-btn"
-          >
+          <button className="w-full py-3 rounded-lg text-white font-bold text-sm transition-all hover:opacity-90" style={{ background: "#7c3aed" }}>
             Claim Day 1 — R$100
           </button>
         ) : (
           <Link href="/sign-in">
-            <button
-              className="w-full py-3 rounded-lg text-white font-bold text-sm transition-all hover:opacity-90"
-              style={{ background: "#7c3aed" }}
-              data-testid="claim-daily-btn"
-            >
+            <button className="w-full py-3 rounded-lg text-white font-bold text-sm transition-all hover:opacity-90" style={{ background: "#7c3aed" }}>
               Sign In to Claim
             </button>
           </Link>
@@ -110,21 +88,12 @@ export default function Rewards() {
       </section>
 
       {/* VIP Tiers */}
-      <section
-        className="mb-5 p-5 rounded-xl"
-        style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}
-        data-testid="vip-section"
-      >
+      <section className="mb-5 p-5 rounded-xl" style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}>
         <h2 className="text-white font-bold mb-1">VIP Club</h2>
         <p className="text-slate-500 text-sm mb-4">Unlock exclusive perks as you play more</p>
         <div className="flex gap-2 overflow-x-auto pb-1">
           {VIP_TIERS.map((tier) => (
-            <div
-              key={tier.name}
-              className="flex-shrink-0 p-3 rounded-lg min-w-28"
-              style={{ background: "#222", border: "1px solid #2a2a2a" }}
-              data-testid={`vip-tier-${tier.name.toLowerCase()}`}
-            >
+            <div key={tier.name} className="flex-shrink-0 p-3 rounded-lg min-w-28" style={{ background: "#222", border: "1px solid #2a2a2a" }}>
               <div className="flex items-center gap-1.5 mb-2">
                 <Crown size={11} style={{ color: tier.color }} />
                 <span className="text-xs font-bold" style={{ color: tier.color }}>{tier.name}</span>
@@ -138,39 +107,26 @@ export default function Rewards() {
       </section>
 
       {/* Daily Challenges */}
-      <section className="mb-5" data-testid="daily-challenges">
+      <section className="mb-5">
         <h2 className="text-white font-bold mb-3 flex items-center gap-2 text-sm">
           <Star size={15} className="text-slate-500" />
           Daily Challenges
         </h2>
-        <div
-          className="p-8 rounded-xl flex flex-col items-center justify-center text-center"
-          style={{ background: "#1a1a1a", border: "1px solid #222" }}
-          data-testid="challenges-empty"
-        >
+        <div className="p-8 rounded-xl flex flex-col items-center justify-center text-center" style={{ background: "#1a1a1a", border: "1px solid #222" }}>
           <Trophy size={28} className="text-slate-700 mb-3" />
           <p className="text-slate-600 text-sm">No challenges available</p>
-          <p className="text-slate-700 text-xs mt-1">
-            {isSignedIn ? "Check back tomorrow" : "Sign in to unlock daily challenges"}
-          </p>
+          <p className="text-slate-700 text-xs mt-1">{isSignedIn ? "Check back tomorrow" : "Sign in to unlock daily challenges"}</p>
         </div>
       </section>
 
       {/* Referral */}
-      <section
-        className="mb-6 p-5 rounded-xl"
-        style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}
-        data-testid="referral-section"
-      >
+      <section className="mb-6 p-5 rounded-xl" style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}>
         <h2 className="text-white font-bold mb-1">Refer a Friend</h2>
-        <p className="text-slate-500 text-sm mb-4">
-          Earn <span className="text-green-500 font-bold">10%</span> of your friends' deposits forever
-        </p>
+        <p className="text-slate-500 text-sm mb-4">Earn <span className="text-green-500 font-bold">10%</span> of your friends' deposits forever</p>
         <div className="flex gap-2 mb-2">
           <div
             className="flex-1 px-4 py-3 rounded-lg font-mono text-sm"
             style={{ background: "#222", border: "1px solid #333", color: isSignedIn ? "#a78bfa" : "#333" }}
-            data-testid="referral-code"
           >
             {referralCode}
           </div>
@@ -179,15 +135,12 @@ export default function Rewards() {
             className="px-4 py-3 rounded-lg flex items-center gap-2 text-sm font-bold transition-all hover:opacity-90"
             style={{ background: isSignedIn ? "#7c3aed" : "#1e1e1e", color: isSignedIn ? "#fff" : "#333", cursor: isSignedIn ? "pointer" : "not-allowed" }}
             disabled={!isSignedIn}
-            data-testid="copy-referral-btn"
           >
             <Copy size={14} />
             {copied ? "Copied!" : "Copy"}
           </button>
         </div>
-        <p className="text-slate-700 text-xs">
-          {isSignedIn ? "Share your code and earn when friends deposit" : "Sign in to get your referral code"}
-        </p>
+        <p className="text-slate-700 text-xs">{isSignedIn ? "Share your code and earn when friends deposit" : "Sign in to get your referral code"}</p>
       </section>
     </div>
   );

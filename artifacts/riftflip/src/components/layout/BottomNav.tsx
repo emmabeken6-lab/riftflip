@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation, Link } from "wouter";
 import { Home, Gamepad2, MessageCircle, Trophy, Coins, Flame, Bomb, LogIn, User } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Show, useUser } from "@clerk/react";
+import { useAuth, avatarUrl } from "@/contexts/AuthContext";
 
 const GAMES = [
   { slug: "coinflip", name: "Coinflip", Icon: Coins },
@@ -13,7 +13,7 @@ const GAMES = [
 export default function BottomNav() {
   const [location, navigate] = useLocation();
   const [gamesOpen, setGamesOpen] = useState(false);
-  const { user } = useUser();
+  const { user, isSignedIn } = useAuth();
   const isGameActive = location.startsWith("/game/");
 
   useEffect(() => {
@@ -102,27 +102,25 @@ export default function BottomNav() {
           {tab("/chat", MessageCircle, "Chat", "nav-tab-chat")}
           {tab("/rewards", Trophy, "Rewards", "nav-tab-rewards")}
 
-          <Show when="signed-in">
+          {isSignedIn && user ? (
             <Link href="/profile" data-testid="nav-tab-profile" className="flex flex-col items-center gap-1 px-3 py-1 relative" onClick={() => setGamesOpen(false)}>
-              {user?.imageUrl ? (
-                <img src={user.imageUrl} alt="Profile" className="w-6 h-6 rounded-full object-cover" style={{ outline: location === "/profile" ? "2px solid #7c3aed" : "none", outlineOffset: "1px" }} />
-              ) : (
-                <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ background: "#2a2a2a", outline: location === "/profile" ? "2px solid #7c3aed" : "none", outlineOffset: "1px" }}>
-                  <User size={12} style={{ color: "#666" }} />
-                </div>
-              )}
+              <img
+                src={avatarUrl(user)}
+                alt="Profile"
+                className="w-6 h-6 rounded-full object-cover"
+                style={{ outline: location === "/profile" ? "2px solid #7c3aed" : "none", outlineOffset: "1px" }}
+              />
               <span className="font-medium truncate" style={{ color: location === "/profile" ? "#a78bfa" : "#4a4a4a", fontSize: "10px" }}>Profile</span>
               {location === "/profile" && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded-full" style={{ background: "#7c3aed" }} />}
             </Link>
-          </Show>
-
-          <Show when="signed-out">
+          ) : (
             <Link href="/sign-in" data-testid="nav-tab-signin" className="flex flex-col items-center gap-1 px-3 py-1 relative" onClick={() => setGamesOpen(false)}>
-              <LogIn size={21} strokeWidth={location.startsWith("/sign") ? 2.4 : 1.7} style={{ color: location.startsWith("/sign") ? "#a78bfa" : "#4a4a4a" }} />
-              <span className="font-medium" style={{ color: location.startsWith("/sign") ? "#a78bfa" : "#4a4a4a", fontSize: "10px" }}>Sign In</span>
-              {location.startsWith("/sign") && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded-full" style={{ background: "#7c3aed" }} />}
+              <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ background: "#222" }}>
+                <User size={13} style={{ color: "#555" }} />
+              </div>
+              <span className="font-medium" style={{ color: location === "/sign-in" ? "#a78bfa" : "#4a4a4a", fontSize: "10px" }}>Sign In</span>
             </Link>
-          </Show>
+          )}
         </div>
       </nav>
     </>

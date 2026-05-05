@@ -1,9 +1,7 @@
-import { Link, useLocation } from "wouter";
-import { useUser, useClerk, Show } from "@clerk/react";
+import { Link } from "wouter";
+import { useAuth, avatarUrl } from "@/contexts/AuthContext";
 import { LogOut, Wallet, Trophy, Gamepad2, Calendar, ExternalLink, Copy, CheckCircle, User, ChevronRight, Shield } from "lucide-react";
 import { useState } from "react";
-
-const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 const DiscordIcon = () => (
   <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
@@ -11,31 +9,23 @@ const DiscordIcon = () => (
   </svg>
 );
 
-function ProfileContent() {
-  const { user, isLoaded } = useUser();
-  const { signOut } = useClerk();
+function SignedInProfile() {
+  const { user, refetch } = useAuth();
   const [copied, setCopied] = useState(false);
 
-  if (!isLoaded) {
-    return (
-      <div className="flex items-center justify-center min-h-screen" style={{ background: "#111" }}>
-        <div className="w-8 h-8 rounded-full border-2 border-violet-500 border-t-transparent animate-spin" />
-      </div>
-    );
-  }
+  if (!user) return null;
 
-  const discordAccount = user?.externalAccounts?.find((a) => a.provider === "discord");
-  const displayName = discordAccount?.username ?? user?.username ?? user?.firstName ?? "Player";
-  const discordId = discordAccount?.externalId;
-  const joinedAt = user?.createdAt
-    ? new Date(user.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
-    : "—";
+  const joinedAt = new Date(user.joinedAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
 
   const copyId = () => {
-    if (!discordId) return;
-    navigator.clipboard.writeText(discordId).catch(() => {});
+    navigator.clipboard.writeText(user.id).catch(() => {});
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleLogout = async () => {
+    await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+    refetch();
   };
 
   return (
@@ -52,57 +42,51 @@ function ProfileContent() {
       <section className="mb-4 p-5 rounded-xl" style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}>
         <div className="flex items-center gap-4">
           <div className="relative flex-shrink-0">
-            {user?.imageUrl ? (
-              <img src={user.imageUrl} alt={displayName} className="w-16 h-16 rounded-full object-cover" style={{ border: "2px solid #2a2a2a" }} />
-            ) : (
-              <div className="w-16 h-16 rounded-full flex items-center justify-center text-xl font-black" style={{ background: "#222", border: "2px solid #2a2a2a" }}>
-                {displayName.charAt(0).toUpperCase()}
-              </div>
-            )}
-            {discordAccount && (
-              <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center" style={{ background: "#5865F2", border: "2px solid #1a1a1a" }}>
-                <DiscordIcon />
-              </div>
-            )}
+            <img
+              src={avatarUrl(user)}
+              alt={user.username}
+              className="w-16 h-16 rounded-full object-cover"
+              style={{ border: "2px solid #2a2a2a" }}
+            />
+            <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center" style={{ background: "#5865F2", border: "2px solid #1a1a1a" }}>
+              <DiscordIcon />
+            </div>
           </div>
 
           <div className="flex-1 min-w-0">
-            <h2 className="text-xl font-black text-white truncate">{displayName}</h2>
-            {discordAccount && (
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="text-sm" style={{ color: "#7c8df0" }}>Discord connected</span>
-              </div>
-            )}
-            <div className="flex items-center gap-1.5 mt-2">
+            <h2 className="text-xl font-black text-white truncate">{user.username}</h2>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="text-sm" style={{ color: "#7c8df0" }}>Discord connected</span>
+            </div>
+            <div className="flex items-center gap-1.5 mt-1.5">
               <Calendar size={12} className="text-slate-700" />
               <span className="text-slate-600 text-xs">Joined {joinedAt}</span>
             </div>
           </div>
         </div>
 
-        {discordId && (
-          <div
-            className="mt-4 flex items-center gap-3 px-3 py-2.5 rounded-lg"
-            style={{ background: "#222", border: "1px solid #333" }}
+        {/* Discord ID row */}
+        <div
+          className="mt-4 flex items-center gap-3 px-3 py-2.5 rounded-lg"
+          style={{ background: "#222", border: "1px solid #333" }}
+        >
+          <span style={{ color: "#7c8df0" }}><DiscordIcon /></span>
+          <span className="text-slate-500 text-xs flex-1 font-mono truncate">ID: {user.id}</span>
+          <button
+            onClick={copyId}
+            className="flex items-center gap-1 text-xs font-semibold transition-all"
+            style={{ color: copied ? "#4ade80" : "#555" }}
           >
-            <span style={{ color: "#7c8df0" }}><DiscordIcon /></span>
-            <span className="text-slate-500 text-xs flex-1 font-mono truncate">ID: {discordId}</span>
-            <button
-              onClick={copyId}
-              className="flex items-center gap-1 text-xs font-semibold transition-all"
-              style={{ color: copied ? "#4ade80" : "#555" }}
-            >
-              {copied ? <CheckCircle size={12} /> : <Copy size={12} />}
-              {copied ? "Copied" : "Copy"}
-            </button>
-          </div>
-        )}
+            {copied ? <CheckCircle size={12} /> : <Copy size={12} />}
+            {copied ? "Copied" : "Copy"}
+          </button>
+        </div>
       </section>
 
       {/* Stats */}
       <section className="grid grid-cols-3 gap-2 mb-4">
         {[
-          { label: "Balance", value: "R$ 0", icon: Wallet },
+          { label: "Balance", value: `R$ ${user.balance.toLocaleString()}`, icon: Wallet },
           { label: "Total Won", value: "R$ 0", icon: Trophy },
           { label: "Games", value: "0", icon: Gamepad2 },
         ].map((s) => (
@@ -137,26 +121,24 @@ function ProfileContent() {
         ))}
       </section>
 
-      {/* Discord verified badge */}
-      {discordAccount && (
-        <section className="mb-4 p-4 rounded-xl" style={{ background: "#1a1a1a", border: "1px solid #222" }}>
-          <div className="flex items-center gap-3">
-            <Shield size={15} className="text-slate-600" />
-            <div className="flex-1">
-              <p className="text-white text-sm font-semibold">Discord Verified</p>
-              <p className="text-slate-600 text-xs">Account linked · Session auto-renews</p>
-            </div>
-            <a href="https://discord.com/channels/@me" target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs" style={{ color: "#7c8df0" }}>
-              Open <ExternalLink size={10} />
-            </a>
+      {/* Discord badge */}
+      <section className="mb-4 p-4 rounded-xl" style={{ background: "#1a1a1a", border: "1px solid #222" }}>
+        <div className="flex items-center gap-3">
+          <Shield size={15} className="text-slate-600" />
+          <div className="flex-1">
+            <p className="text-white text-sm font-semibold">Discord Verified</p>
+            <p className="text-slate-600 text-xs">Authenticated via Discord OAuth2</p>
           </div>
-        </section>
-      )}
+          <a href="https://discord.com/channels/@me" target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs" style={{ color: "#7c8df0" }}>
+            Open <ExternalLink size={10} />
+          </a>
+        </div>
+      </section>
 
       {/* Sign out */}
       <div className="mb-10">
         <button
-          onClick={() => signOut({ redirectUrl: basePath || "/" })}
+          onClick={handleLogout}
           className="w-full py-3 rounded-xl font-bold text-sm transition-colors hover:bg-[#1e1010] flex items-center justify-center gap-2"
           style={{ background: "#1a1010", border: "1px solid #2a1010", color: "#ef4444" }}
         >
@@ -169,27 +151,34 @@ function ProfileContent() {
 }
 
 export default function Profile() {
-  return (
-    <>
-      <Show when="signed-in">
-        <ProfileContent />
-      </Show>
-      <Show when="signed-out">
-        <div className="flex min-h-screen items-center justify-center px-4" style={{ background: "#111" }}>
-          <div className="text-center">
-            <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}>
-              <User size={24} className="text-slate-600" />
-            </div>
-            <h2 className="text-xl font-black text-white mb-2">Sign in to view your profile</h2>
-            <p className="text-slate-500 text-sm mb-6">Log in with Discord to see your account</p>
-            <Link href="/sign-in">
-              <button className="px-8 py-3 rounded-lg text-white font-bold transition-all hover:opacity-90" style={{ background: "#7c3aed" }}>
-                Sign In with Discord
-              </button>
-            </Link>
+  const { isSignedIn, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen" style={{ background: "#111" }}>
+        <div className="w-8 h-8 rounded-full border-2 border-violet-500 border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+
+  if (!isSignedIn) {
+    return (
+      <div className="flex min-h-screen items-center justify-center px-4" style={{ background: "#111" }}>
+        <div className="text-center">
+          <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}>
+            <User size={24} className="text-slate-600" />
           </div>
+          <h2 className="text-xl font-black text-white mb-2">Sign in to view your profile</h2>
+          <p className="text-slate-500 text-sm mb-6">Log in with Discord to see your account</p>
+          <Link href="/sign-in">
+            <button className="px-8 py-3 rounded-lg text-white font-bold transition-all hover:opacity-90" style={{ background: "#7c3aed" }}>
+              Sign In with Discord
+            </button>
+          </Link>
         </div>
-      </Show>
-    </>
-  );
+      </div>
+    );
+  }
+
+  return <SignedInProfile />;
 }

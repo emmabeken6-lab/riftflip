@@ -1,18 +1,8 @@
-import { SignUp } from "@clerk/react";
+import { useEffect } from "react";
+import { useLocation } from "wouter";
 
-const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
-
-export default function SignUpPage() {
-  return (
-    <div
-      className="flex min-h-screen items-center justify-center px-4"
-      style={{ background: "#080614" }}
-    >
-      <SignUp
-        routing="path"
-        path={`${basePath}/sign-up`}
-        signInUrl={`${basePath}/sign-in`}
-      />
-    </div>
-  );
+export default function SignUp() {
+  const [, navigate] = useLocation();
+  useEffect(() => { navigate("/sign-in"); }, [navigate]);
+  return null;
 }
