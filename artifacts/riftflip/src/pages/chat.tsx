@@ -31,36 +31,25 @@ export default function Chat() {
     const time = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
     setMessages((prev) => [
       ...prev,
-      {
-        id: nextId++,
-        user: "You",
-        avatar: "Y",
-        color: "#7c3aed",
-        text: input.trim(),
-        time,
-        isWin: false,
-      },
+      { id: nextId++, user: "You", avatar: "Y", color: "#7c3aed", text: input.trim(), time, isWin: false },
     ]);
     setInput("");
   };
 
   const addReaction = (msgId: number, emoji: string) => {
-    setReactions((prev) => ({
-      ...prev,
-      [msgId]: [...(prev[msgId] ?? []), emoji],
-    }));
+    setReactions((prev) => ({ ...prev, [msgId]: [...(prev[msgId] ?? []), emoji] }));
   };
 
   return (
     <div
       className="flex flex-col"
-      style={{ height: "calc(100dvh - 64px)", background: "#080614" }}
+      style={{ height: "calc(100dvh - 64px)", background: "#111" }}
       data-testid="chat-page"
     >
       {/* Header */}
       <div
         className="flex items-center justify-between px-4 py-3 flex-shrink-0"
-        style={{ borderBottom: "1px solid rgba(139,92,246,0.2)", background: "rgba(255,255,255,0.03)" }}
+        style={{ borderBottom: "1px solid #222", background: "#161616" }}
         data-testid="chat-header"
       >
         <div>
@@ -98,11 +87,8 @@ export default function Chat() {
                 >
                   {msg.isWin ? (
                     <div
-                      className="w-full px-4 py-2.5 rounded-xl flex items-center gap-3"
-                      style={{
-                        background: "linear-gradient(90deg, rgba(16,185,129,0.15), rgba(16,185,129,0.05))",
-                        border: "1px solid rgba(16,185,129,0.3)",
-                      }}
+                      className="w-full px-4 py-2.5 rounded-lg flex items-center gap-3"
+                      style={{ background: "#1a2a1a", border: "1px solid #2a3a2a" }}
                     >
                       <span className="text-green-400 text-lg">🏆</span>
                       <span className="text-green-300 text-sm font-semibold">{msg.text}</span>
@@ -117,22 +103,14 @@ export default function Chat() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-baseline gap-2 mb-0.5">
-                          <span className="text-xs font-bold" style={{ color: msg.color }}>
-                            {msg.user}
-                          </span>
+                          <span className="text-xs font-bold" style={{ color: msg.color }}>{msg.user}</span>
                           <span className="text-slate-600 text-xs">{msg.time}</span>
                         </div>
                         <p className="text-slate-300 text-sm break-words">{msg.text}</p>
                         {reactions[msg.id] && reactions[msg.id].length > 0 && (
                           <div className="flex gap-1 mt-1 flex-wrap">
                             {reactions[msg.id].map((r, i) => (
-                              <span
-                                key={i}
-                                className="px-1.5 py-0.5 rounded-full text-xs"
-                                style={{ background: "rgba(255,255,255,0.08)" }}
-                              >
-                                {r}
-                              </span>
+                              <span key={i} className="px-1.5 py-0.5 rounded text-xs" style={{ background: "#222" }}>{r}</span>
                             ))}
                           </div>
                         )}
@@ -162,27 +140,24 @@ export default function Chat() {
       {/* Input */}
       <div
         className="px-4 py-3 flex-shrink-0"
-        style={{ borderTop: "1px solid rgba(139,92,246,0.2)", background: "rgba(255,255,255,0.03)" }}
+        style={{ borderTop: "1px solid #222", background: "#161616" }}
         data-testid="chat-input-area"
       >
-        <div className="flex gap-3 items-center">
+        <div className="flex gap-2 items-center">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && sendMessage()}
             placeholder="Type a message..."
-            className="flex-1 px-4 py-2.5 rounded-xl text-sm text-white placeholder-slate-600 outline-none"
-            style={{
-              background: "rgba(255,255,255,0.07)",
-              border: "1px solid rgba(139,92,246,0.25)",
-            }}
+            className="flex-1 px-4 py-2.5 rounded-lg text-sm text-white outline-none transition-colors"
+            style={{ background: "#1e1e1e", border: "1px solid #333", color: "#e5e5e5" }}
             data-testid="chat-input"
           />
           <button
             onClick={sendMessage}
-            className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all hover:scale-105 active:scale-95"
-            style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)" }}
+            className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-all hover:opacity-80"
+            style={{ background: "#7c3aed" }}
             data-testid="chat-send-btn"
           >
             <Send size={16} className="text-white" />

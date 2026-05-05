@@ -1,18 +1,8 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { motion } from "framer-motion";
-import { useUser, useClerk } from "@clerk/react";
-import {
-  Wallet as WalletIcon,
-  ArrowUpRight,
-  ArrowDownLeft,
-  TrendingUp,
-  TrendingDown,
-  History,
-  LogIn,
-} from "lucide-react";
+import { useUser } from "@clerk/react";
+import { Wallet as WalletIcon, ArrowUpRight, ArrowDownLeft, TrendingUp, TrendingDown, History, LogIn } from "lucide-react";
 
-const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 const QUICK_AMOUNTS = [500, 1000, 2500, 5000];
 
 export default function Wallet() {
@@ -21,30 +11,30 @@ export default function Wallet() {
   const { isSignedIn, user, isLoaded } = useUser();
 
   return (
-    <div className="min-h-screen px-3 py-4" style={{ background: "#080614" }} data-testid="wallet-page">
+    <div className="min-h-screen px-3 py-4" style={{ background: "#111" }} data-testid="wallet-page">
       <div className="mb-5">
-        <h1 className="text-2xl font-black text-white mb-0.5 flex items-center gap-2">
-          <WalletIcon size={24} className="text-violet-400" />
+        <h1 className="text-xl font-black text-white mb-0.5 flex items-center gap-2">
+          <WalletIcon size={20} className="text-violet-400" />
           Wallet
         </h1>
         <p className="text-slate-500 text-sm">Manage your Robux balance</p>
       </div>
 
-      {/* Sign-in required notice (signed out only) */}
+      {/* Sign-in notice */}
       {isLoaded && !isSignedIn && (
         <div
-          className="mb-5 p-4 rounded-2xl flex items-center gap-3"
-          style={{ background: "rgba(124,58,237,0.12)", border: "1px solid rgba(139,92,246,0.3)" }}
+          className="mb-5 p-4 rounded-xl flex items-center gap-3"
+          style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}
           data-testid="signin-notice"
         >
-          <LogIn size={18} className="text-violet-400 flex-shrink-0" />
-          <p className="text-slate-300 text-sm flex-1">
-            <span className="text-violet-300 font-semibold">Sign in</span> to see your balance, deposit, and withdraw Robux.
+          <LogIn size={16} className="text-slate-500 flex-shrink-0" />
+          <p className="text-slate-400 text-sm flex-1">
+            Sign in to deposit and withdraw Robux.
           </p>
           <Link href="/sign-in">
             <button
-              className="px-4 py-2 rounded-xl text-sm font-bold text-white transition-all hover:scale-105"
-              style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)" }}
+              className="px-4 py-2 rounded-lg text-sm font-bold text-white transition-all hover:opacity-90"
+              style={{ background: "#7c3aed" }}
             >
               Sign In
             </button>
@@ -54,71 +44,52 @@ export default function Wallet() {
 
       {/* Balance Card */}
       <section
-        className="mb-5 p-6 rounded-2xl relative overflow-hidden"
-        style={{
-          background: "linear-gradient(135deg, rgba(124,58,237,0.2) 0%, rgba(79,70,229,0.15) 100%)",
-          border: "1px solid rgba(139,92,246,0.3)",
-        }}
+        className="mb-5 p-5 rounded-xl"
+        style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}
         data-testid="balance-card"
       >
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full opacity-10" style={{ background: "radial-gradient(circle, #a78bfa, transparent)" }} />
-        </div>
         {isSignedIn && user?.imageUrl && (
-          <div className="flex items-center gap-2 mb-3 relative">
-            <img src={user.imageUrl} alt="avatar" className="w-7 h-7 rounded-full object-cover" />
-            <span className="text-slate-400 text-sm font-medium">{user.username ?? user.firstName ?? "Player"}</span>
+          <div className="flex items-center gap-2 mb-3">
+            <img src={user.imageUrl} alt="avatar" className="w-6 h-6 rounded-full object-cover" />
+            <span className="text-slate-400 text-sm">{user.username ?? user.firstName ?? "Player"}</span>
           </div>
         )}
-        <p className="text-slate-400 text-sm font-medium mb-1 relative">Available Balance</p>
-        <motion.p
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.5 }}
-          className="text-5xl font-black mb-4 relative"
-          style={{ color: isSignedIn ? "#fff" : "#334155" }}
+        <p className="text-slate-500 text-sm mb-1">Available Balance</p>
+        <p
+          className="text-4xl font-black mb-4"
+          style={{ color: isSignedIn ? "#fff" : "#333" }}
           data-testid="balance-amount"
         >
           R$ 0
-        </motion.p>
+        </p>
         <div className="flex gap-3">
           <button
             onClick={() => setTab("deposit")}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-white font-bold text-sm transition-all hover:scale-105"
-            style={{
-              background: "linear-gradient(135deg, #7c3aed, #4f46e5)",
-              opacity: isSignedIn ? 1 : 0.4,
-              cursor: isSignedIn ? "pointer" : "not-allowed",
-            }}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-white font-bold text-sm transition-all hover:opacity-90"
+            style={{ background: isSignedIn ? "#7c3aed" : "#1e1e1e", color: isSignedIn ? "#fff" : "#333", cursor: isSignedIn ? "pointer" : "not-allowed" }}
             disabled={!isSignedIn}
             data-testid="deposit-btn"
           >
-            <ArrowDownLeft size={16} />
+            <ArrowDownLeft size={15} />
             Deposit
           </button>
           <button
             onClick={() => setTab("withdraw")}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all hover:scale-105"
-            style={{
-              background: "rgba(255,255,255,0.08)",
-              border: "1px solid rgba(255,255,255,0.15)",
-              color: "#fff",
-              opacity: isSignedIn ? 1 : 0.4,
-              cursor: isSignedIn ? "pointer" : "not-allowed",
-            }}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm transition-colors hover:bg-[#222]"
+            style={{ background: "#1e1e1e", border: "1px solid #333", color: isSignedIn ? "#ccc" : "#333", cursor: isSignedIn ? "pointer" : "not-allowed" }}
             disabled={!isSignedIn}
             data-testid="withdraw-btn"
           >
-            <ArrowUpRight size={16} />
+            <ArrowUpRight size={15} />
             Withdraw
           </button>
         </div>
       </section>
 
-      {/* Deposit / Withdraw Panel */}
+      {/* Deposit / Withdraw panel */}
       <section
-        className="mb-5 p-5 rounded-2xl"
-        style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(139,92,246,0.2)" }}
+        className="mb-5 p-5 rounded-xl"
+        style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}
         data-testid="action-panel"
       >
         <div className="flex gap-2 mb-4">
@@ -126,10 +97,11 @@ export default function Wallet() {
             <button
               key={t}
               onClick={() => setTab(t)}
-              className="flex-1 py-2 rounded-xl text-sm font-bold capitalize transition-all"
+              className="flex-1 py-2 rounded-lg text-sm font-bold capitalize transition-colors"
               style={{
-                background: tab === t ? "linear-gradient(135deg, #7c3aed, #4f46e5)" : "rgba(255,255,255,0.05)",
-                color: tab === t ? "#fff" : "#64748b",
+                background: tab === t ? "#7c3aed" : "#222",
+                color: tab === t ? "#fff" : "#555",
+                border: "none",
               }}
               data-testid={`tab-${t}`}
             >
@@ -139,18 +111,19 @@ export default function Wallet() {
         </div>
 
         <div className="mb-4">
-          <label className="text-slate-400 text-sm mb-2 block">Amount (Robux)</label>
+          <label className="text-slate-500 text-sm mb-2 block">Amount (Robux)</label>
           <div
-            className="flex items-center gap-3 px-4 py-3 rounded-xl"
-            style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(139,92,246,0.3)" }}
+            className="flex items-center gap-3 px-4 py-3 rounded-lg"
+            style={{ background: "#222", border: "1px solid #333" }}
           >
-            <span className="text-violet-500 font-bold text-lg">R$</span>
+            <span className="text-slate-500 font-bold text-lg">R$</span>
             <input
               type="number"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="0"
-              className="flex-1 bg-transparent text-white text-xl font-bold outline-none placeholder-slate-700"
+              className="flex-1 bg-transparent text-white text-xl font-bold outline-none"
+              style={{ color: "#e5e5e5" }}
               disabled={!isSignedIn}
               data-testid="amount-input"
             />
@@ -162,12 +135,11 @@ export default function Wallet() {
             <button
               key={amt}
               onClick={() => isSignedIn && setAmount(String(amt))}
-              className="py-2 rounded-xl text-sm font-bold transition-all hover:scale-105"
+              className="py-2 rounded-lg text-sm font-bold transition-colors hover:bg-[#2a2a2a]"
               style={{
-                background: amount === String(amt) ? "rgba(139,92,246,0.25)" : "rgba(255,255,255,0.06)",
-                border: amount === String(amt) ? "1px solid rgba(139,92,246,0.5)" : "1px solid rgba(255,255,255,0.08)",
-                color: amount === String(amt) ? "#a78bfa" : "#64748b",
-                opacity: isSignedIn ? 1 : 0.5,
+                background: amount === String(amt) ? "#2a1f44" : "#222",
+                border: amount === String(amt) ? "1px solid #7c3aed" : "1px solid #2a2a2a",
+                color: amount === String(amt) ? "#c4b5fd" : "#555",
                 cursor: isSignedIn ? "pointer" : "not-allowed",
               }}
               data-testid={`quick-${amt}`}
@@ -179,8 +151,8 @@ export default function Wallet() {
 
         {isSignedIn ? (
           <button
-            className="w-full py-3.5 rounded-xl text-white font-bold text-base transition-all hover:scale-[1.02]"
-            style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)", opacity: amount ? 1 : 0.5, cursor: amount ? "pointer" : "not-allowed" }}
+            className="w-full py-3 rounded-lg text-white font-bold text-sm transition-all hover:opacity-90"
+            style={{ background: amount ? "#7c3aed" : "#1e1e1e", color: amount ? "#fff" : "#333", cursor: amount ? "pointer" : "not-allowed" }}
             disabled={!amount}
             data-testid="confirm-action-btn"
           >
@@ -189,8 +161,8 @@ export default function Wallet() {
         ) : (
           <Link href="/sign-in">
             <button
-              className="w-full py-3.5 rounded-xl text-white font-bold text-base transition-all hover:scale-[1.02]"
-              style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)" }}
+              className="w-full py-3 rounded-lg text-white font-bold text-sm transition-all hover:opacity-90"
+              style={{ background: "#7c3aed" }}
               data-testid="confirm-action-btn"
             >
               Sign In to {tab === "deposit" ? "Deposit" : "Withdraw"}
@@ -202,17 +174,17 @@ export default function Wallet() {
       {/* Stats */}
       <section className="grid grid-cols-3 gap-3 mb-5" data-testid="wallet-stats">
         {[
-          { label: "Total Deposited", value: "R$ 0", icon: ArrowDownLeft, color: "#22c55e" },
-          { label: "Total Won", value: "R$ 0", icon: TrendingUp, color: "#3b82f6" },
-          { label: "Total Wagered", value: "R$ 0", icon: TrendingDown, color: "#a78bfa" },
+          { label: "Deposited", value: "R$ 0", icon: ArrowDownLeft },
+          { label: "Total Won", value: "R$ 0", icon: TrendingUp },
+          { label: "Wagered", value: "R$ 0", icon: TrendingDown },
         ].map((stat) => (
           <div
             key={stat.label}
-            className="p-3 rounded-2xl text-center"
-            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}
+            className="p-3 rounded-xl text-center"
+            style={{ background: "#1a1a1a", border: "1px solid #222" }}
           >
-            <stat.icon size={18} style={{ color: stat.color }} className="mx-auto mb-1 opacity-30" />
-            <p className="text-slate-700 font-bold text-sm">{stat.value}</p>
+            <stat.icon size={16} className="mx-auto mb-1 text-slate-700" />
+            <p className="text-slate-600 font-bold text-sm">{stat.value}</p>
             <p className="text-slate-700 text-xs">{stat.label}</p>
           </div>
         ))}
@@ -220,19 +192,19 @@ export default function Wallet() {
 
       {/* Transaction History */}
       <section className="mb-8" data-testid="transaction-history">
-        <h2 className="text-white font-bold mb-3 flex items-center gap-2">
-          <History size={16} className="text-slate-500" />
+        <h2 className="text-white font-bold mb-3 flex items-center gap-2 text-sm">
+          <History size={15} className="text-slate-600" />
           Transaction History
         </h2>
         <div
-          className="p-10 rounded-2xl flex flex-col items-center justify-center text-center"
-          style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}
+          className="p-10 rounded-xl flex flex-col items-center justify-center text-center"
+          style={{ background: "#1a1a1a", border: "1px solid #222" }}
           data-testid="transactions-empty"
         >
-          <History size={32} className="text-slate-700 mb-3" />
-          <p className="text-slate-500 font-medium text-sm">No transactions yet</p>
+          <History size={28} className="text-slate-700 mb-3" />
+          <p className="text-slate-600 text-sm">No transactions yet</p>
           <p className="text-slate-700 text-xs mt-1">
-            {isSignedIn ? "Your deposit and win history will appear here" : "Sign in to view your history"}
+            {isSignedIn ? "Deposit and win history will appear here" : "Sign in to view your history"}
           </p>
         </div>
       </section>

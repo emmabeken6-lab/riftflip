@@ -66,21 +66,18 @@ export default function MinefieldGame() {
   };
 
   return (
-    <div className="min-h-screen" style={{ background: "#080614" }} data-testid="minefield-page">
+    <div className="min-h-screen" style={{ background: "#111" }} data-testid="minefield-page">
 
       {/* Header */}
-      <div
-        className="flex items-center justify-between px-4 py-4"
-        style={{ borderBottom: "1px solid rgba(139,92,246,0.15)" }}
-      >
+      <div className="flex items-center justify-between px-4 py-4" style={{ borderBottom: "1px solid #222" }}>
         <div className="flex items-center gap-3">
           <Link href="/games">
             <button
-              className="w-9 h-9 rounded-xl flex items-center justify-center transition-all hover:scale-105"
-              style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)" }}
+              className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors hover:bg-[#222]"
+              style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}
               data-testid="back-btn"
             >
-              <ArrowLeft size={18} className="text-slate-300" />
+              <ArrowLeft size={18} className="text-slate-400" />
             </button>
           </Link>
           <div className="flex items-center gap-2.5">
@@ -93,13 +90,8 @@ export default function MinefieldGame() {
         </div>
         <button
           onClick={() => (playing ? cashOut() : setShowPlay(true))}
-          className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-white text-sm font-bold transition-all hover:scale-105 active:scale-95"
-          style={{
-            background: playing
-              ? "linear-gradient(135deg, #10b981, #059669)"
-              : "linear-gradient(135deg, #7c3aed, #4f46e5)",
-            boxShadow: playing ? "0 0 16px rgba(16,185,129,0.4)" : "0 0 16px rgba(124,58,237,0.4)",
-          }}
+          className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-white text-sm font-bold transition-all hover:opacity-90"
+          style={{ background: playing ? "#059669" : "#7c3aed" }}
           data-testid={playing ? "cashout-btn" : "play-btn"}
         >
           {playing ? `Cash Out ${multiplier}x` : <><Plus size={15} /> Play</>}
@@ -112,11 +104,11 @@ export default function MinefieldGame() {
           <button
             key={key}
             onClick={() => setTab(key)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
             style={{
-              background: tab === key ? "rgba(139,92,246,0.2)" : "rgba(255,255,255,0.05)",
-              border: tab === key ? "1px solid rgba(139,92,246,0.4)" : "1px solid rgba(255,255,255,0.08)",
-              color: tab === key ? "#a78bfa" : "#64748b",
+              background: tab === key ? "#1e1e1e" : "#161616",
+              border: tab === key ? "1px solid #444" : "1px solid #2a2a2a",
+              color: tab === key ? "#c4b5fd" : "#555",
             }}
             data-testid={`tab-${key}`}
           >
@@ -138,20 +130,19 @@ export default function MinefieldGame() {
           >
             {tab === "active" ? (
               playing || gameOver ? (
-                /* Game board */
                 <div
-                  className="rounded-2xl p-5"
-                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}
+                  className="rounded-xl p-5"
+                  style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}
                   data-testid="game-board"
                 >
-                  {/* Multiplier bar */}
+                  {/* Stats row */}
                   <div className="flex items-center justify-between mb-4">
                     <div>
-                      <p className="text-slate-500 text-xs">Bet</p>
+                      <p className="text-slate-600 text-xs">Bet</p>
                       <p className="text-white font-bold">R$ {betAmount || "0"}</p>
                     </div>
                     <div className="text-center">
-                      <p className="text-slate-500 text-xs">Multiplier</p>
+                      <p className="text-slate-600 text-xs">Multiplier</p>
                       <p
                         className="text-2xl font-black"
                         style={{ color: gameOver === "win" ? "#22c55e" : gameOver === "lose" ? "#ef4444" : "#a78bfa" }}
@@ -160,8 +151,8 @@ export default function MinefieldGame() {
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-slate-500 text-xs">Profit</p>
-                      <p className="text-green-400 font-bold">
+                      <p className="text-slate-600 text-xs">Profit</p>
+                      <p className="text-green-500 font-bold">
                         R$ {Math.round(Number(betAmount || 0) * multiplier).toLocaleString()}
                       </p>
                     </div>
@@ -173,10 +164,10 @@ export default function MinefieldGame() {
                       <motion.div
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="mb-4 p-3 rounded-xl text-center font-bold"
+                        className="mb-4 p-3 rounded-lg text-center font-bold text-sm"
                         style={{
-                          background: gameOver === "win" ? "rgba(16,185,129,0.2)" : "rgba(239,68,68,0.2)",
-                          border: `1px solid ${gameOver === "win" ? "rgba(16,185,129,0.4)" : "rgba(239,68,68,0.4)"}`,
+                          background: gameOver === "win" ? "#0a1f14" : "#1f0a0a",
+                          border: `1px solid ${gameOver === "win" ? "#1a4a2a" : "#4a1a1a"}`,
                           color: gameOver === "win" ? "#22c55e" : "#f87171",
                         }}
                         data-testid="game-result"
@@ -204,14 +195,14 @@ export default function MinefieldGame() {
                           key={i}
                           whileTap={{ scale: 0.92 }}
                           onClick={() => revealCell(i)}
-                          className="aspect-square rounded-xl flex items-center justify-center text-xl transition-all"
+                          className="aspect-square rounded-lg flex items-center justify-center text-xl transition-colors"
                           style={{
                             background: isRevealed
-                              ? showMine ? "rgba(239,68,68,0.3)" : "rgba(16,185,129,0.2)"
-                              : showAll ? "rgba(239,68,68,0.2)" : "rgba(255,255,255,0.07)",
+                              ? showMine ? "#2a0a0a" : "#0a1f0a"
+                              : showAll ? "#1f0a0a" : "#222",
                             border: isRevealed
-                              ? showMine ? "1px solid rgba(239,68,68,0.5)" : "1px solid rgba(16,185,129,0.4)"
-                              : showAll ? "1px solid rgba(239,68,68,0.3)" : "1px solid rgba(255,255,255,0.1)",
+                              ? showMine ? "1px solid #5a1a1a" : "1px solid #1a5a1a"
+                              : showAll ? "1px solid #3a1a1a" : "1px solid #333",
                             cursor: playing && !isRevealed && !gameOver ? "pointer" : "default",
                           }}
                           disabled={!!gameOver || isRevealed || !playing}
@@ -226,8 +217,8 @@ export default function MinefieldGame() {
                   {gameOver && (
                     <button
                       onClick={reset}
-                      className="w-full py-3 rounded-xl text-white font-bold text-sm transition-all hover:scale-[1.02]"
-                      style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)" }}
+                      className="w-full py-3 rounded-lg text-white font-bold text-sm transition-all hover:opacity-90"
+                      style={{ background: "#7c3aed" }}
                       data-testid="play-again-btn"
                     >
                       Play Again
@@ -235,10 +226,9 @@ export default function MinefieldGame() {
                   )}
                 </div>
               ) : (
-                /* Empty / start state */
                 <div
-                  className="rounded-2xl p-10 flex flex-col items-center justify-center text-center"
-                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", minHeight: "300px" }}
+                  className="rounded-xl p-10 flex flex-col items-center justify-center text-center"
+                  style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", minHeight: "300px" }}
                   data-testid="active-empty"
                 >
                   <Loader2 size={36} className="text-slate-700 mb-4 animate-spin" />
@@ -246,8 +236,8 @@ export default function MinefieldGame() {
                   <p className="text-slate-500 text-sm mb-6">Start a new game to begin playing</p>
                   <button
                     onClick={() => setShowPlay(true)}
-                    className="px-6 py-3 rounded-xl text-white font-bold text-sm transition-all hover:scale-105"
-                    style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)" }}
+                    className="px-6 py-2.5 rounded-lg text-white font-bold text-sm transition-all hover:opacity-90"
+                    style={{ background: "#7c3aed" }}
                     data-testid="start-game-btn"
                   >
                     Start Game
@@ -256,8 +246,8 @@ export default function MinefieldGame() {
               )
             ) : (
               <div
-                className="rounded-2xl p-10 flex flex-col items-center justify-center text-center"
-                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", minHeight: "300px" }}
+                className="rounded-xl p-10 flex flex-col items-center justify-center text-center"
+                style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", minHeight: "300px" }}
                 data-testid="history-empty"
               >
                 <History size={36} className="text-slate-700 mb-4" />
@@ -278,7 +268,7 @@ export default function MinefieldGame() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="fixed inset-0 z-40"
-              style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}
+              style={{ background: "rgba(0,0,0,0.75)" }}
               onClick={() => setShowPlay(false)}
               data-testid="sheet-backdrop"
             />
@@ -287,28 +277,24 @@ export default function MinefieldGame() {
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 28, stiffness: 300 }}
-              className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl px-5 pt-5 pb-10"
-              style={{ background: "#0f0d22", border: "1px solid rgba(139,92,246,0.3)", borderBottom: "none" }}
+              className="fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl px-5 pt-5 pb-10"
+              style={{ background: "#1a1a1a", borderTop: "1px solid #2a2a2a" }}
               data-testid="play-sheet"
             >
-              <div className="w-10 h-1 rounded-full bg-slate-700 mx-auto mb-5" />
+              <div className="w-10 h-1 rounded-full bg-[#333] mx-auto mb-5" />
               <h2 className="text-white font-black text-xl mb-1">Start Minefield</h2>
-              <p className="text-slate-500 text-sm mb-5">
-                Reveal cells to find gems. Hit a mine and you lose everything!
-              </p>
+              <p className="text-slate-500 text-sm mb-5">Reveal cells to find gems. Hit a mine and lose everything!</p>
 
               <p className="text-slate-400 text-sm mb-2">Bet amount (R$)</p>
-              <div
-                className="flex items-center gap-3 px-4 py-3 rounded-xl mb-4"
-                style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(139,92,246,0.3)" }}
-              >
+              <div className="flex items-center gap-3 px-4 py-3 rounded-lg mb-4" style={{ background: "#222", border: "1px solid #333" }}>
                 <span className="text-violet-400 font-bold text-lg">R$</span>
                 <input
                   type="number"
                   value={betAmount}
                   onChange={(e) => setBetAmount(e.target.value)}
                   placeholder="0"
-                  className="flex-1 bg-transparent text-white text-xl font-bold outline-none placeholder-slate-700"
+                  className="flex-1 bg-transparent text-white text-xl font-bold outline-none"
+                  style={{ color: "#e5e5e5" }}
                   data-testid="bet-input"
                 />
               </div>
@@ -318,11 +304,11 @@ export default function MinefieldGame() {
                   <button
                     key={amt}
                     onClick={() => setBetAmount(String(amt))}
-                    className="py-2 rounded-xl text-xs font-bold transition-all"
+                    className="py-2 rounded-lg text-xs font-bold transition-colors"
                     style={{
-                      background: betAmount === String(amt) ? "rgba(139,92,246,0.25)" : "rgba(255,255,255,0.06)",
-                      border: betAmount === String(amt) ? "1px solid rgba(139,92,246,0.5)" : "1px solid rgba(255,255,255,0.08)",
-                      color: betAmount === String(amt) ? "#a78bfa" : "#64748b",
+                      background: betAmount === String(amt) ? "#2a1f44" : "#222",
+                      border: betAmount === String(amt) ? "1px solid #7c3aed" : "1px solid #2a2a2a",
+                      color: betAmount === String(amt) ? "#c4b5fd" : "#555",
                     }}
                     data-testid={`quick-${amt}`}
                   >
@@ -333,10 +319,11 @@ export default function MinefieldGame() {
 
               <button
                 onClick={startGame}
-                className="w-full py-4 rounded-xl text-white font-black text-base transition-all hover:scale-[1.02] active:scale-95"
+                className="w-full py-3.5 rounded-lg text-white font-black text-base transition-all hover:opacity-90"
                 style={{
-                  background: betAmount ? "linear-gradient(135deg, #7c3aed, #4f46e5)" : "rgba(255,255,255,0.06)",
-                  opacity: betAmount ? 1 : 0.5,
+                  background: betAmount ? "#7c3aed" : "#1e1e1e",
+                  border: betAmount ? "none" : "1px solid #2a2a2a",
+                  color: betAmount ? "#fff" : "#444",
                   cursor: betAmount ? "pointer" : "not-allowed",
                 }}
                 disabled={!betAmount}

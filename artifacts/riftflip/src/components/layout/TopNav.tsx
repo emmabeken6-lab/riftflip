@@ -33,9 +33,7 @@ export default function TopNav() {
   useEffect(() => {
     if (!menuOpen) return;
     const handler = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -45,22 +43,14 @@ export default function TopNav() {
     <header
       data-testid="top-nav"
       className="hidden md:flex fixed top-0 left-0 right-0 z-50 items-center justify-between px-6 h-16"
-      style={{
-        background: "rgba(8,6,20,0.93)",
-        borderBottom: "1px solid rgba(139,92,246,0.22)",
-        backdropFilter: "blur(24px)",
-      }}
+      style={{ background: "#151515", borderBottom: "1px solid #222" }}
     >
       {/* Logo */}
       <Link href="/" className="flex items-center gap-3" data-testid="nav-logo">
-        <img src={riftflipLogo} alt="Riftflip" className="w-9 h-9 object-contain" />
+        <img src={riftflipLogo} alt="Riftflip" className="w-8 h-8 object-contain" />
         <span
           className="text-xl font-black tracking-tight"
-          style={{
-            background: "linear-gradient(135deg, #a78bfa, #60a5fa)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-          }}
+          style={{ background: "linear-gradient(135deg, #a78bfa, #60a5fa)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
         >
           RIFTFLIP
         </span>
@@ -75,11 +65,8 @@ export default function TopNav() {
               key={link.href}
               href={link.href}
               data-testid={`nav-link-${link.label.toLowerCase()}`}
-              className="px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200"
-              style={{
-                color: isActive ? "#a78bfa" : "#94a3b8",
-                background: isActive ? "rgba(139,92,246,0.15)" : "transparent",
-              }}
+              className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              style={{ color: isActive ? "#c4b5fd" : "#666", background: isActive ? "#1e1e1e" : "transparent" }}
             >
               {link.label}
             </Link>
@@ -89,132 +76,96 @@ export default function TopNav() {
 
       {/* Right side */}
       <div className="flex items-center gap-3">
-        {/* Balance pill (signed in) */}
         <Show when="signed-in">
+          {/* Balance */}
           <div
-            className="flex items-center gap-2 px-4 py-2 rounded-xl"
-            style={{ background: "rgba(139,92,246,0.15)", border: "1px solid rgba(139,92,246,0.28)" }}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg"
+            style={{ background: "#1e1e1e", border: "1px solid #2a2a2a" }}
             data-testid="balance-display"
           >
-            <Wallet size={14} className="text-violet-400" />
-            <span className="text-sm font-bold text-violet-300">R$ 0</span>
+            <Wallet size={13} className="text-slate-500" />
+            <span className="text-sm font-bold text-slate-300">R$ 0</span>
           </div>
-        </Show>
 
-        {/* User dropdown (signed in) */}
-        <Show when="signed-in">
+          {/* User dropdown */}
           <div className="relative" ref={menuRef}>
             <button
               onClick={() => setMenuOpen((v) => !v)}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl transition-all hover:scale-[1.02]"
-              style={{
-                background: menuOpen ? "rgba(139,92,246,0.18)" : "rgba(255,255,255,0.07)",
-                border: menuOpen ? "1px solid rgba(139,92,246,0.4)" : "1px solid rgba(255,255,255,0.11)",
-              }}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors hover:bg-[#1e1e1e]"
+              style={{ background: menuOpen ? "#1e1e1e" : "#191919", border: "1px solid #2a2a2a" }}
               data-testid="user-menu-btn"
             >
               {isLoaded && user?.imageUrl ? (
                 <div className="relative">
-                  <img
-                    src={user.imageUrl}
-                    alt={displayName}
-                    className="w-7 h-7 rounded-full object-cover"
-                  />
+                  <img src={user.imageUrl} alt={displayName} className="w-7 h-7 rounded-full object-cover" />
                   {discordAccount && (
-                    <div
-                      className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center"
-                      style={{ background: "#5865F2", border: "1.5px solid #080614" }}
-                    >
+                    <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center" style={{ background: "#5865F2", border: "1.5px solid #151515" }}>
                       <DiscordIcon />
                     </div>
                   )}
                 </div>
               ) : (
-                <div
-                  className="w-7 h-7 rounded-full flex items-center justify-center"
-                  style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)" }}
-                >
-                  <User size={13} className="text-white" />
+                <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ background: "#2a2a2a" }}>
+                  <User size={13} className="text-slate-400" />
                 </div>
               )}
-              <span className="text-slate-200 text-sm font-semibold max-w-28 truncate">{displayName}</span>
-              <ChevronDown
-                size={13}
-                className="text-slate-500 transition-transform"
-                style={{ transform: menuOpen ? "rotate(180deg)" : "rotate(0deg)" }}
-              />
+              <span className="text-slate-300 text-sm font-medium max-w-24 truncate">{displayName}</span>
+              <ChevronDown size={13} className="text-slate-600" style={{ transform: menuOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
             </button>
 
-            {/* Dropdown menu */}
+            {/* Dropdown */}
             {menuOpen && (
               <div
-                className="absolute right-0 top-full mt-2 rounded-2xl overflow-hidden z-50 min-w-52"
-                style={{
-                  background: "linear-gradient(180deg, #0f0d22 0%, #0c0a1e 100%)",
-                  border: "1px solid rgba(139,92,246,0.28)",
-                  boxShadow: "0 16px 48px rgba(0,0,0,0.7)",
-                }}
+                className="absolute right-0 top-full mt-2 rounded-xl overflow-hidden z-50 min-w-48"
+                style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", boxShadow: "0 8px 24px rgba(0,0,0,0.5)" }}
               >
-                {/* User info header */}
-                <div
-                  className="px-4 py-3 flex items-center gap-3"
-                  style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}
-                >
+                {/* User header */}
+                <div className="px-4 py-3 flex items-center gap-3" style={{ borderBottom: "1px solid #222" }}>
                   {user?.imageUrl ? (
-                    <img src={user.imageUrl} alt={displayName} className="w-9 h-9 rounded-full object-cover" />
+                    <img src={user.imageUrl} alt={displayName} className="w-8 h-8 rounded-full object-cover" />
                   ) : (
-                    <div
-                      className="w-9 h-9 rounded-full flex items-center justify-center font-black"
-                      style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)" }}
-                    >
-                      {displayName.charAt(0).toUpperCase()}
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center font-black" style={{ background: "#2a2a2a" }}>
+                      <User size={14} className="text-slate-400" />
                     </div>
                   )}
                   <div className="min-w-0">
-                    <p className="text-white font-bold text-sm truncate">{displayName}</p>
+                    <p className="text-white font-semibold text-sm truncate">{displayName}</p>
                     {discordAccount && (
                       <div className="flex items-center gap-1">
                         <DiscordIcon />
-                        <span className="text-xs" style={{ color: "#7c8df0" }}>Discord</span>
+                        <span className="text-xs text-slate-500">Discord</span>
                       </div>
                     )}
                   </div>
                 </div>
 
-                {/* Menu items */}
+                {/* Links */}
                 {[
-                  { label: "View Profile", icon: User, href: "/profile", color: "#a78bfa" },
-                  { label: "Wallet", icon: Wallet, href: "/wallet", color: "#60a5fa" },
-                  { label: "Rewards", icon: Trophy, href: "/rewards", color: "#fbbf24" },
-                  { label: "Games", icon: Gamepad2, href: "/games", color: "#34d399" },
+                  { label: "View Profile", icon: User, href: "/profile" },
+                  { label: "Wallet", icon: Wallet, href: "/wallet" },
+                  { label: "Rewards", icon: Trophy, href: "/rewards" },
+                  { label: "Games", icon: Gamepad2, href: "/games" },
                 ].map((item, i) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setMenuOpen(false)}
-                  >
+                  <Link key={item.href} href={item.href} onClick={() => setMenuOpen(false)}>
                     <div
-                      className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-white/5 transition-colors"
-                      style={{ borderBottom: i < 3 ? "1px solid rgba(255,255,255,0.05)" : "none" }}
+                      className="flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors hover:bg-[#222]"
+                      style={{ borderBottom: i < 3 ? "1px solid #1e1e1e" : "none" }}
                     >
-                      <item.icon size={15} style={{ color: item.color }} />
-                      <span className="text-slate-300 text-sm font-medium">{item.label}</span>
+                      <item.icon size={14} className="text-slate-500" />
+                      <span className="text-slate-300 text-sm">{item.label}</span>
                     </div>
                   </Link>
                 ))}
 
                 {/* Sign out */}
-                <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+                <div style={{ borderTop: "1px solid #222" }}>
                   <button
-                    onClick={() => {
-                      setMenuOpen(false);
-                      signOut({ redirectUrl: basePath || "/" });
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-500/10 transition-colors"
+                    onClick={() => { setMenuOpen(false); signOut({ redirectUrl: basePath || "/" }); }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-[#1e1010]"
                     data-testid="sign-out-btn"
                   >
-                    <LogOut size={15} className="text-red-400" />
-                    <span className="text-red-400 text-sm font-medium">Sign Out</span>
+                    <LogOut size={14} className="text-red-500" />
+                    <span className="text-red-500 text-sm">Sign Out</span>
                   </button>
                 </div>
               </div>
@@ -222,15 +173,14 @@ export default function TopNav() {
           </div>
         </Show>
 
-        {/* Sign in button (signed out) */}
         <Show when="signed-out">
           <Link href="/sign-in">
             <button
-              className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold transition-all hover:scale-105 active:scale-95"
-              style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)", color: "#fff" }}
+              className="flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-bold transition-all hover:opacity-90"
+              style={{ background: "#7c3aed", color: "#fff" }}
               data-testid="sign-in-btn"
             >
-              <LogIn size={15} />
+              <LogIn size={14} />
               Sign In
             </button>
           </Link>

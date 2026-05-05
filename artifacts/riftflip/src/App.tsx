@@ -48,24 +48,24 @@ const clerkAppearance = {
   variables: {
     colorPrimary: "#7c3aed",
     colorForeground: "#e2e8f0",
-    colorMutedForeground: "#64748b",
+    colorMutedForeground: "#777",
     colorDanger: "#ef4444",
-    colorBackground: "#0f0d22",
-    colorInput: "rgba(255,255,255,0.07)",
+    colorBackground: "#1a1a1a",
+    colorInput: "#222",
     colorInputForeground: "#e2e8f0",
-    colorNeutral: "rgba(139,92,246,0.3)",
+    colorNeutral: "#333",
     fontFamily: "Inter, sans-serif",
-    borderRadius: "0.75rem",
+    borderRadius: "0.5rem",
   },
   elements: {
     rootBox: "w-full flex justify-center",
-    cardBox: "rounded-2xl w-[420px] max-w-full overflow-hidden border border-violet-500/20",
+    cardBox: "rounded-xl w-[420px] max-w-full overflow-hidden",
     card: "!shadow-none !border-0 !bg-transparent !rounded-none",
     footer: "!shadow-none !border-0 !bg-transparent !rounded-none",
     headerTitle: "text-white font-black",
-    headerSubtitle: "text-slate-400",
+    headerSubtitle: "text-slate-500",
     socialButtonsBlockButtonText: "text-white font-semibold",
-    formFieldLabel: "text-slate-300 font-medium",
+    formFieldLabel: "text-slate-400 font-medium",
     footerActionLink: "text-violet-400 hover:text-violet-300",
     footerActionText: "text-slate-500",
     dividerText: "text-slate-600",
@@ -74,13 +74,13 @@ const clerkAppearance = {
     alertText: "text-slate-200",
     logoBox: "flex justify-center",
     logoImage: "h-10 w-10",
-    socialButtonsBlockButton: "border border-violet-500/20 hover:border-violet-500/40 transition-all",
-    formButtonPrimary: "bg-gradient-to-r from-violet-600 to-indigo-500 hover:opacity-90 transition-all font-bold",
-    formFieldInput: "bg-white/7 border-violet-500/30 text-white placeholder:text-slate-600",
-    footerAction: "bg-white/3",
-    dividerLine: "bg-white/10",
-    alert: "bg-white/5 border border-white/10",
-    otpCodeFieldInput: "border-violet-500/30 bg-white/7 text-white",
+    socialButtonsBlockButton: "border border-[#333] hover:border-[#444] transition-colors",
+    formButtonPrimary: "!bg-[#7c3aed] hover:opacity-90 transition-all font-bold",
+    formFieldInput: "!bg-[#222] !border-[#333] text-white placeholder:text-slate-600",
+    footerAction: "!bg-[#161616]",
+    dividerLine: "!bg-[#2a2a2a]",
+    alert: "!bg-[#1e1e1e] border !border-[#2a2a2a]",
+    otpCodeFieldInput: "!border-[#333] !bg-[#222] text-white",
     formFieldRow: "gap-2",
     main: "gap-4",
   },
@@ -88,7 +88,7 @@ const clerkAppearance = {
 
 function SignInPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center px-4" style={{ background: "#080614" }}>
+    <div className="flex min-h-screen items-center justify-center px-4" style={{ background: "#111" }}>
       <SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} />
     </div>
   );
@@ -96,7 +96,7 @@ function SignInPage() {
 
 function SignUpPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center px-4" style={{ background: "#080614" }}>
+    <div className="flex min-h-screen items-center justify-center px-4" style={{ background: "#111" }}>
       <SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in`} />
     </div>
   );

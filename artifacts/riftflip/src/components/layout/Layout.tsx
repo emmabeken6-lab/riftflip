@@ -8,7 +8,7 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   return (
-    <div className="min-h-screen" style={{ background: "#080614" }}>
+    <div className="min-h-screen" style={{ background: "#111" }}>
       <TopNav />
       <main className="md:pt-16 pb-20 md:pb-0">
         {children}
