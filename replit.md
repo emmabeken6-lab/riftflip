@@ -83,6 +83,19 @@ pnpm workspace monorepo. Riftflip is a dark cosmic-themed online casino web app 
 - `jackpot.tsx` — jackpot wheel
 - `minefield.tsx` — minesweeper-style
 
+## Authentication
+
+- **Provider**: Clerk Auth (Replit-managed), provisioned via `setupClerkWhitelabelAuth()`
+- **Env vars auto-set**: `CLERK_SECRET_KEY`, `CLERK_PUBLISHABLE_KEY`, `VITE_CLERK_PUBLISHABLE_KEY`
+- **Proxy path**: `/api/__clerk` (clerkProxyMiddleware in api-server)
+- **Sign-in page**: `/sign-in` — dark themed, Riftflip branded
+- **Sign-up page**: `/sign-up`
+- **Login methods**: Managed via Auth pane in Replit toolbar (Discord, Google, GitHub, etc.)
+- **Frontend**: `@clerk/react` — uses `<ClerkProvider>`, `useUser()`, `<Show when="signed-in/out">`
+- **TopNav**: Shows avatar + username + sign-out when signed in; "Sign In" button when signed out
+- **Wallet/Rewards**: Show "sign in" prompts for unauthenticated users; full UI unlocks on sign-in
+- **DO NOT use `<UserButton />`** — use `useUser()` hook + custom profile display
+
 ## Key Commands
 
 - `pnpm run typecheck` — full typecheck across all packages

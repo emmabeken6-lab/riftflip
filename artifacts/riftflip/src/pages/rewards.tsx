@@ -1,6 +1,8 @@
 import { useState } from "react";
+import { Link } from "wouter";
 import { motion } from "framer-motion";
-import { Crown, Gift, Star, Trophy, Copy, Sparkles } from "lucide-react";
+import { useUser } from "@clerk/react";
+import { Crown, Gift, Star, Trophy, Copy, LogIn } from "lucide-react";
 
 const VIP_TIERS = [
   { name: "Bronze", color: "#cd7f32", perks: ["5% Rakeback", "Weekly Bonus"] },
@@ -14,9 +16,12 @@ const DAILY_REWARDS = [100, 200, 350, 500, 750, 1200, 2500];
 
 export default function Rewards() {
   const [copied, setCopied] = useState(false);
-  const referralCode = "RIFT-????-????";
+  const { isSignedIn, user, isLoaded } = useUser();
+  const referralCode = isSignedIn ? `RIFT-${(user?.id ?? "").slice(-8).toUpperCase()}` : "RIFT-????-????";
 
   const copyReferral = () => {
+    if (!isSignedIn) return;
+    navigator.clipboard.writeText(referralCode).catch(() => {});
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -28,22 +33,34 @@ export default function Rewards() {
           <Crown size={24} className="text-yellow-400" />
           Rewards
         </h1>
-        <p className="text-slate-500 text-sm">Sign in to claim bonuses and track progress</p>
-      </div>
-
-      {/* Sign-in required notice */}
-      <div
-        className="mb-5 p-4 rounded-2xl flex items-center gap-3"
-        style={{ background: "rgba(124,58,237,0.12)", border: "1px solid rgba(139,92,246,0.3)" }}
-        data-testid="signin-notice"
-      >
-        <Sparkles size={18} className="text-violet-400 flex-shrink-0" />
-        <p className="text-slate-300 text-sm">
-          <span className="text-violet-300 font-semibold">Sign in</span> to track your streak, claim challenges, and earn referral bonuses.
+        <p className="text-slate-500 text-sm">
+          {isSignedIn ? `Welcome back, ${user?.username ?? user?.firstName ?? "Player"}!` : "Sign in to claim bonuses and track progress"}
         </p>
       </div>
 
-      {/* Daily Login Streak (structure, no user data) */}
+      {/* Sign-in prompt (signed-out only) */}
+      {isLoaded && !isSignedIn && (
+        <div
+          className="mb-5 p-4 rounded-2xl flex items-center gap-3"
+          style={{ background: "rgba(124,58,237,0.12)", border: "1px solid rgba(139,92,246,0.3)" }}
+          data-testid="signin-notice"
+        >
+          <LogIn size={18} className="text-violet-400 flex-shrink-0" />
+          <p className="text-slate-300 text-sm flex-1">
+            <span className="text-violet-300 font-semibold">Sign in</span> to track your streak, claim challenges, and earn referral bonuses.
+          </p>
+          <Link href="/sign-in">
+            <button
+              className="px-4 py-2 rounded-xl text-sm font-bold text-white transition-all hover:scale-105"
+              style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)" }}
+            >
+              Sign In
+            </button>
+          </Link>
+        </div>
+      )}
+
+      {/* Daily Login Streak */}
       <section
         className="mb-5 p-5 rounded-2xl"
         style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(139,92,246,0.25)" }}
@@ -62,26 +79,37 @@ export default function Rewards() {
               <div
                 className="w-full aspect-square rounded-xl flex items-center justify-center"
                 style={{
-                  background: "rgba(255,255,255,0.05)",
-                  border: "1px solid rgba(255,255,255,0.08)",
+                  background: isSignedIn && i === 0 ? "rgba(139,92,246,0.3)" : "rgba(255,255,255,0.05)",
+                  border: isSignedIn && i === 0 ? "1px solid rgba(139,92,246,0.6)" : "1px solid rgba(255,255,255,0.08)",
                 }}
               >
-                <span className="text-slate-600 text-xs font-bold">{i + 1}</span>
+                <span className={`text-xs font-bold ${isSignedIn && i === 0 ? "text-violet-300" : "text-slate-600"}`}>{i + 1}</span>
               </div>
-              <span className="text-slate-600 text-xs font-bold">
+              <span className={`text-xs font-bold ${isSignedIn && i === 0 ? "text-violet-400" : "text-slate-600"}`}>
                 R${reward >= 1000 ? `${reward / 1000}K` : reward}
               </span>
             </div>
           ))}
         </div>
-        <button
-          className="w-full py-3 rounded-xl text-white font-bold text-sm opacity-40 cursor-not-allowed"
-          style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)" }}
-          disabled
-          data-testid="claim-daily-btn"
-        >
-          Sign in to Claim
-        </button>
+        {isSignedIn ? (
+          <button
+            className="w-full py-3 rounded-xl text-white font-bold text-sm transition-all hover:scale-[1.02]"
+            style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)" }}
+            data-testid="claim-daily-btn"
+          >
+            Claim Day 1 Reward — R$100
+          </button>
+        ) : (
+          <Link href="/sign-in">
+            <button
+              className="w-full py-3 rounded-xl text-white font-bold text-sm transition-all hover:scale-[1.02]"
+              style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)" }}
+              data-testid="claim-daily-btn"
+            >
+              Sign In to Claim
+            </button>
+          </Link>
+        )}
       </section>
 
       {/* VIP Tiers */}
@@ -100,17 +128,12 @@ export default function Rewards() {
             <div
               key={tier.name}
               className="flex-shrink-0 p-3 rounded-xl min-w-28"
-              style={{
-                background: "rgba(255,255,255,0.04)",
-                border: `1px solid ${tier.color}30`,
-              }}
+              style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${tier.color}30` }}
               data-testid={`vip-tier-${tier.name.toLowerCase()}`}
             >
               <div className="flex items-center gap-1.5 mb-2">
                 <Crown size={12} style={{ color: tier.color }} />
-                <span className="text-xs font-bold" style={{ color: tier.color }}>
-                  {tier.name}
-                </span>
+                <span className="text-xs font-bold" style={{ color: tier.color }}>{tier.name}</span>
               </div>
               {tier.perks.map((perk) => (
                 <p key={perk} className="text-xs text-slate-600 flex items-center gap-1">
@@ -122,7 +145,7 @@ export default function Rewards() {
         </div>
       </section>
 
-      {/* Daily Challenges (empty state) */}
+      {/* Daily Challenges */}
       <section className="mb-5" data-testid="daily-challenges">
         <h2 className="text-white font-bold mb-3 flex items-center gap-2">
           <Star size={16} className="text-violet-400" />
@@ -135,7 +158,9 @@ export default function Rewards() {
         >
           <Trophy size={32} className="text-slate-700 mb-3" />
           <p className="text-slate-500 font-medium text-sm">No challenges available</p>
-          <p className="text-slate-700 text-xs mt-1">Sign in to unlock daily challenges</p>
+          <p className="text-slate-700 text-xs mt-1">
+            {isSignedIn ? "Check back tomorrow for new challenges" : "Sign in to unlock daily challenges"}
+          </p>
         </div>
       </section>
 
@@ -151,24 +176,35 @@ export default function Rewards() {
         </p>
         <div className="flex gap-2 mb-2">
           <div
-            className="flex-1 px-4 py-3 rounded-xl font-mono text-sm text-slate-600"
-            style={{ background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.2)" }}
+            className="flex-1 px-4 py-3 rounded-xl font-mono text-sm"
+            style={{
+              background: "rgba(139,92,246,0.08)",
+              border: "1px solid rgba(139,92,246,0.2)",
+              color: isSignedIn ? "#a78bfa" : "#334155",
+            }}
             data-testid="referral-code"
           >
             {referralCode}
           </div>
           <button
             onClick={copyReferral}
-            className="px-4 py-3 rounded-xl flex items-center gap-2 text-sm font-bold transition-all hover:scale-105 opacity-50 cursor-not-allowed"
-            style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)", color: "#fff" }}
-            disabled
+            className="px-4 py-3 rounded-xl flex items-center gap-2 text-sm font-bold transition-all hover:scale-105"
+            style={{
+              background: "linear-gradient(135deg, #7c3aed, #4f46e5)",
+              color: "#fff",
+              opacity: isSignedIn ? 1 : 0.5,
+              cursor: isSignedIn ? "pointer" : "not-allowed",
+            }}
+            disabled={!isSignedIn}
             data-testid="copy-referral-btn"
           >
             <Copy size={15} />
             {copied ? "Copied!" : "Copy"}
           </button>
         </div>
-        <p className="text-slate-600 text-xs">Sign in to get your unique referral link</p>
+        <p className="text-slate-600 text-xs">
+          {isSignedIn ? "Share your code and earn when friends deposit" : "Sign in to get your unique referral link"}
+        </p>
       </section>
     </div>
   );

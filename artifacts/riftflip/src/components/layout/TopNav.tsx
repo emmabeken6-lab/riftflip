@@ -1,17 +1,22 @@
 import { useLocation, Link } from "wouter";
-import { Wallet } from "lucide-react";
+import { Wallet, LogIn, LogOut, User } from "lucide-react";
+import { useUser, useClerk, Show } from "@clerk/react";
 import riftflipLogo from "@assets/5d919577b49f5f0010fa8d0f_1777874058058.png";
+
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 const navLinks = [
   { href: "/", label: "Home" },
   { href: "/games", label: "Games" },
-  { href: "/chat", label: "Chat", badge: 4 },
+  { href: "/chat", label: "Chat" },
   { href: "/rewards", label: "Rewards" },
   { href: "/wallet", label: "Wallet" },
 ];
 
 export default function TopNav() {
   const [location] = useLocation();
+  const { user, isLoaded } = useUser();
+  const { signOut } = useClerk();
 
   return (
     <header
@@ -52,42 +57,64 @@ export default function TopNav() {
               }}
             >
               {link.label}
-              {link.badge && (
-                <span
-                  className="absolute -top-1 -right-1 flex items-center justify-center w-4 h-4 rounded-full text-white font-bold"
-                  style={{
-                    fontSize: "9px",
-                    background: "#ef4444",
-                    boxShadow: "0 0 6px rgba(239,68,68,0.6)",
-                  }}
-                >
-                  {link.badge}
-                </span>
-              )}
             </Link>
           );
         })}
       </nav>
 
       <div className="flex items-center gap-3">
-        <div
-          className="flex items-center gap-2 px-4 py-2 rounded-xl"
-          style={{ background: "rgba(139,92,246,0.15)", border: "1px solid rgba(139,92,246,0.3)" }}
-          data-testid="balance-display"
-        >
-          <Wallet size={15} className="text-violet-400" />
-          <span className="text-sm font-bold text-violet-300">R$ 12,450</span>
-        </div>
-        <div
-          className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold cursor-pointer"
-          style={{
-            background: "linear-gradient(135deg, #7c3aed, #4f46e5)",
-            border: "2px solid rgba(167,139,250,0.5)",
-          }}
-          data-testid="user-avatar"
-        >
-          R
-        </div>
+        <Show when="signed-in">
+          <div
+            className="flex items-center gap-2 px-4 py-2 rounded-xl"
+            style={{ background: "rgba(139,92,246,0.15)", border: "1px solid rgba(139,92,246,0.3)" }}
+            data-testid="balance-display"
+          >
+            <Wallet size={15} className="text-violet-400" />
+            <span className="text-sm font-bold text-violet-300">R$ 0</span>
+          </div>
+          <button
+            onClick={() => signOut({ redirectUrl: basePath || "/" })}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all hover:scale-105"
+            style={{
+              background: "rgba(255,255,255,0.07)",
+              border: "1px solid rgba(255,255,255,0.12)",
+              color: "#94a3b8",
+            }}
+            data-testid="sign-out-btn"
+          >
+            {isLoaded && user?.imageUrl ? (
+              <img
+                src={user.imageUrl}
+                alt={user.username ?? "User"}
+                className="w-6 h-6 rounded-full object-cover"
+              />
+            ) : (
+              <div
+                className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
+                style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)" }}
+              >
+                <User size={12} className="text-white" />
+              </div>
+            )}
+            <span className="text-slate-300 text-sm font-medium max-w-24 truncate">
+              {user?.username ?? user?.firstName ?? "Account"}
+            </span>
+            <LogOut size={14} className="text-slate-500" />
+          </button>
+        </Show>
+
+        <Show when="signed-out">
+          <Link href="/sign-in">
+            <button
+              className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold transition-all hover:scale-105 active:scale-95"
+              style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)", color: "#fff" }}
+              data-testid="sign-in-btn"
+            >
+              <LogIn size={15} />
+              Sign In
+            </button>
+          </Link>
+        </Show>
       </div>
     </header>
   );
