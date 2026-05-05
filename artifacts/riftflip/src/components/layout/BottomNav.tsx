@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useLocation, Link } from "wouter";
-import { Home, Gamepad2, MessageCircle, Trophy, Wallet, Coins, Flame, Bomb, LogIn } from "lucide-react";
+import { Home, Gamepad2, MessageCircle, Trophy, Wallet, Coins, Flame, Bomb, LogIn, User } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Show } from "@clerk/react";
+import { Show, useUser } from "@clerk/react";
 
 const GAMES = [
   { slug: "coinflip", name: "Coinflip", Icon: Coins },
@@ -10,12 +10,10 @@ const GAMES = [
   { slug: "minefield", name: "Minefield", Icon: Bomb },
 ];
 
-const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
-
 export default function BottomNav() {
   const [location, navigate] = useLocation();
   const [gamesOpen, setGamesOpen] = useState(false);
-
+  const { user } = useUser();
   const isGameActive = location.startsWith("/game/");
 
   useEffect(() => {
@@ -29,8 +27,51 @@ export default function BottomNav() {
     };
   }, [gamesOpen]);
 
+  const NavTab = ({
+    href,
+    icon: Icon,
+    label,
+    testId,
+    overrideActive,
+  }: {
+    href: string;
+    icon: React.ElementType;
+    label: string;
+    testId: string;
+    overrideActive?: boolean;
+  }) => {
+    const isActive = overrideActive ?? (href === "/" ? location === "/" : location === href);
+    return (
+      <Link
+        href={href}
+        data-testid={testId}
+        className="flex flex-col items-center gap-1 px-3 py-1 min-w-0 relative"
+        onClick={() => setGamesOpen(false)}
+      >
+        <Icon
+          size={22}
+          strokeWidth={isActive ? 2.5 : 1.8}
+          style={{ color: isActive ? "#a78bfa" : "#64748b" }}
+        />
+        <span
+          className="font-medium truncate"
+          style={{ color: isActive ? "#a78bfa" : "#64748b", fontSize: "10px" }}
+        >
+          {label}
+        </span>
+        {isActive && (
+          <div
+            className="absolute bottom-0 left-1/2 -translate-x-1/2 w-5 h-0.5 rounded-full"
+            style={{ background: "linear-gradient(90deg, #7c3aed, #a78bfa)" }}
+          />
+        )}
+      </Link>
+    );
+  };
+
   return (
     <>
+      {/* Games flyup */}
       <AnimatePresence>
         {gamesOpen && (
           <>
@@ -91,9 +132,6 @@ export default function BottomNav() {
                           {game.name}
                         </p>
                       </div>
-                      {isActive && (
-                        <span className="text-xs font-bold" style={{ color: "#4ade80" }}>1.1</span>
-                      )}
                     </div>
                   );
                 })}
@@ -120,58 +158,105 @@ export default function BottomNav() {
         }}
       >
         <div className="flex items-center justify-around px-2 py-2 pb-safe">
-          <Link href="/" data-testid="nav-tab-home" className="flex flex-col items-center gap-1 px-3 py-1 min-w-0 relative" onClick={() => setGamesOpen(false)}>
-            <Home size={22} strokeWidth={location === "/" ? 2.5 : 1.8} style={{ color: location === "/" ? "#a78bfa" : "#64748b" }} />
-            <span className="font-medium truncate" style={{ color: location === "/" ? "#a78bfa" : "#64748b", fontSize: "10px" }}>Home</span>
-            {location === "/" && (
-              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-5 h-0.5 rounded-full" style={{ background: "linear-gradient(90deg, #7c3aed, #a78bfa)" }} />
-            )}
-          </Link>
+          <NavTab href="/" icon={Home} label="Home" testId="nav-tab-home" />
 
+          {/* Games button (not a real link) */}
           <button
             data-testid="nav-tab-games"
             className="flex flex-col items-center gap-1 px-3 py-1 min-w-0 relative cursor-pointer"
             onClick={(e) => { e.stopPropagation(); setGamesOpen((v) => !v); }}
           >
-            <Gamepad2 size={22} strokeWidth={isGameActive || gamesOpen ? 2.5 : 1.8} style={{ color: isGameActive || gamesOpen ? "#a78bfa" : "#64748b" }} />
-            <span className="font-medium" style={{ color: isGameActive || gamesOpen ? "#a78bfa" : "#64748b", fontSize: "10px" }}>Games</span>
+            <Gamepad2
+              size={22}
+              strokeWidth={isGameActive || gamesOpen ? 2.5 : 1.8}
+              style={{ color: isGameActive || gamesOpen ? "#a78bfa" : "#64748b" }}
+            />
+            <span
+              className="font-medium"
+              style={{ color: isGameActive || gamesOpen ? "#a78bfa" : "#64748b", fontSize: "10px" }}
+            >
+              Games
+            </span>
             {(isGameActive || gamesOpen) && (
-              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-5 h-0.5 rounded-full" style={{ background: "linear-gradient(90deg, #7c3aed, #a78bfa)" }} />
+              <div
+                className="absolute bottom-0 left-1/2 -translate-x-1/2 w-5 h-0.5 rounded-full"
+                style={{ background: "linear-gradient(90deg, #7c3aed, #a78bfa)" }}
+              />
             )}
           </button>
 
-          <Link href="/chat" data-testid="nav-tab-chat" className="flex flex-col items-center gap-1 px-3 py-1 min-w-0 relative" onClick={() => setGamesOpen(false)}>
-            <MessageCircle size={22} strokeWidth={location === "/chat" ? 2.5 : 1.8} style={{ color: location === "/chat" ? "#a78bfa" : "#64748b" }} />
-            <span className="font-medium truncate" style={{ color: location === "/chat" ? "#a78bfa" : "#64748b", fontSize: "10px" }}>Chat</span>
-            {location === "/chat" && (
-              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-5 h-0.5 rounded-full" style={{ background: "linear-gradient(90deg, #7c3aed, #a78bfa)" }} />
-            )}
-          </Link>
+          <NavTab href="/chat" icon={MessageCircle} label="Chat" testId="nav-tab-chat" />
+          <NavTab href="/rewards" icon={Trophy} label="Rewards" testId="nav-tab-rewards" />
 
-          <Link href="/rewards" data-testid="nav-tab-rewards" className="flex flex-col items-center gap-1 px-3 py-1 min-w-0 relative" onClick={() => setGamesOpen(false)}>
-            <Trophy size={22} strokeWidth={location === "/rewards" ? 2.5 : 1.8} style={{ color: location === "/rewards" ? "#a78bfa" : "#64748b" }} />
-            <span className="font-medium truncate" style={{ color: location === "/rewards" ? "#a78bfa" : "#64748b", fontSize: "10px" }}>Rewards</span>
-            {location === "/rewards" && (
-              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-5 h-0.5 rounded-full" style={{ background: "linear-gradient(90deg, #7c3aed, #a78bfa)" }} />
-            )}
-          </Link>
-
+          {/* Wallet (signed in) or Sign In (signed out) */}
           <Show when="signed-in">
-            <Link href="/wallet" data-testid="nav-tab-wallet" className="flex flex-col items-center gap-1 px-3 py-1 min-w-0 relative" onClick={() => setGamesOpen(false)}>
-              <Wallet size={22} strokeWidth={location === "/wallet" ? 2.5 : 1.8} style={{ color: location === "/wallet" ? "#a78bfa" : "#64748b" }} />
-              <span className="font-medium truncate" style={{ color: location === "/wallet" ? "#a78bfa" : "#64748b", fontSize: "10px" }}>Wallet</span>
-              {location === "/wallet" && (
-                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-5 h-0.5 rounded-full" style={{ background: "linear-gradient(90deg, #7c3aed, #a78bfa)" }} />
+            {/* Profile avatar tab when signed in */}
+            <Link
+              href="/profile"
+              data-testid="nav-tab-profile"
+              className="flex flex-col items-center gap-1 px-3 py-1 min-w-0 relative"
+              onClick={() => setGamesOpen(false)}
+            >
+              {user?.imageUrl ? (
+                <img
+                  src={user.imageUrl}
+                  alt="Profile"
+                  className="w-6 h-6 rounded-full object-cover"
+                  style={{
+                    outline: location === "/profile" ? "2px solid #a78bfa" : "none",
+                    outlineOffset: "1px",
+                  }}
+                />
+              ) : (
+                <div
+                  className="w-6 h-6 rounded-full flex items-center justify-center"
+                  style={{
+                    background: "linear-gradient(135deg, #7c3aed, #4f46e5)",
+                    outline: location === "/profile" ? "2px solid #a78bfa" : "none",
+                    outlineOffset: "1px",
+                  }}
+                >
+                  <User size={12} className="text-white" />
+                </div>
+              )}
+              <span
+                className="font-medium truncate"
+                style={{ color: location === "/profile" ? "#a78bfa" : "#64748b", fontSize: "10px" }}
+              >
+                Profile
+              </span>
+              {location === "/profile" && (
+                <div
+                  className="absolute bottom-0 left-1/2 -translate-x-1/2 w-5 h-0.5 rounded-full"
+                  style={{ background: "linear-gradient(90deg, #7c3aed, #a78bfa)" }}
+                />
               )}
             </Link>
           </Show>
 
           <Show when="signed-out">
-            <Link href="/sign-in" data-testid="nav-tab-signin" className="flex flex-col items-center gap-1 px-3 py-1 min-w-0 relative" onClick={() => setGamesOpen(false)}>
-              <LogIn size={22} strokeWidth={location.startsWith("/sign") ? 2.5 : 1.8} style={{ color: location.startsWith("/sign") ? "#a78bfa" : "#64748b" }} />
-              <span className="font-medium truncate" style={{ color: location.startsWith("/sign") ? "#a78bfa" : "#64748b", fontSize: "10px" }}>Sign In</span>
+            <Link
+              href="/sign-in"
+              data-testid="nav-tab-signin"
+              className="flex flex-col items-center gap-1 px-3 py-1 min-w-0 relative"
+              onClick={() => setGamesOpen(false)}
+            >
+              <LogIn
+                size={22}
+                strokeWidth={location.startsWith("/sign") ? 2.5 : 1.8}
+                style={{ color: location.startsWith("/sign") ? "#a78bfa" : "#64748b" }}
+              />
+              <span
+                className="font-medium truncate"
+                style={{ color: location.startsWith("/sign") ? "#a78bfa" : "#64748b", fontSize: "10px" }}
+              >
+                Sign In
+              </span>
               {location.startsWith("/sign") && (
-                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-5 h-0.5 rounded-full" style={{ background: "linear-gradient(90deg, #7c3aed, #a78bfa)" }} />
+                <div
+                  className="absolute bottom-0 left-1/2 -translate-x-1/2 w-5 h-0.5 rounded-full"
+                  style={{ background: "linear-gradient(90deg, #7c3aed, #a78bfa)" }}
+                />
               )}
             </Link>
           </Show>

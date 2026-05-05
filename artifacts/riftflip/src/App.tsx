@@ -16,6 +16,7 @@ import Wallet from "@/pages/wallet";
 import CoinflipGame from "@/pages/game/coinflip";
 import JackpotGame from "@/pages/game/jackpot";
 import MinefieldGame from "@/pages/game/minefield";
+import Profile from "@/pages/profile";
 
 const queryClient = new QueryClient();
 
@@ -131,6 +132,7 @@ function Router() {
       <Route path="/chat" component={Chat} />
       <Route path="/rewards" component={Rewards} />
       <Route path="/wallet" component={Wallet} />
+      <Route path="/profile" component={Profile} />
       <Route path="/sign-in/*?" component={SignInPage} />
       <Route path="/sign-up/*?" component={SignUpPage} />
       <Route component={NotFound} />
@@ -152,13 +154,17 @@ function ClerkProviderWithRoutes() {
         signIn: {
           start: {
             title: "Welcome back",
-            subtitle: "Sign in to your Riftflip account",
+            subtitle: "Sign in with Discord to access your account",
+            actionLink: "Sign up",
+            actionText: "Don't have an account?",
           },
         },
         signUp: {
           start: {
             title: "Join Riftflip",
-            subtitle: "Create your casino account",
+            subtitle: "Sign up with Discord to start playing",
+            actionLink: "Sign in",
+            actionText: "Already have an account?",
           },
         },
       }}
