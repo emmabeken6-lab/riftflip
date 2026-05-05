@@ -5,7 +5,7 @@ import riftflipLogo from "@assets/5d919577b49f5f0010fa8d0f_1777874058058.png";
 
 const GAMES = [
   { slug: "coinflip", name: "Coinflip", icon: "🪙" },
-  { slug: "jackpot", name: "Jackpot", icon: "🏆" },
+  { slug: "jackpot", name: "Jackpot", icon: "🔥" },
   { slug: "minefield", name: "Minefield", icon: "💣" },
 ];
 
@@ -13,7 +13,6 @@ export default function Home() {
   return (
     <div className="min-h-screen" style={{ background: "#080614" }}>
 
-      {/* Mobile compact header */}
       <div
         className="md:hidden flex items-center gap-3 px-4 py-3"
         style={{ borderBottom: "1px solid rgba(139,92,246,0.15)" }}
@@ -52,29 +51,21 @@ export default function Home() {
                 "linear-gradient(90deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.1) 60%, transparent 100%)",
             }}
           />
-          <div className="absolute bottom-4 left-4 flex gap-2 flex-wrap">
+          {/* Invisible overlay buttons over "Play" and "How it works" in banner image */}
+          <div className="absolute bottom-4 left-4 flex gap-2">
             <Link href="/games" data-testid="play-games-btn">
               <button
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-white text-sm font-bold transition-all hover:scale-105 active:scale-95"
-                style={{
-                  background: "linear-gradient(135deg, #7c3aed, #4f46e5)",
-                  boxShadow: "0 0 16px rgba(124,58,237,0.5)",
-                }}
-              >
-                Play Games
-              </button>
+                aria-label="Play Games"
+                className="px-10 py-5 rounded-xl"
+                style={{ background: "transparent", border: "none", cursor: "pointer" }}
+              />
             </Link>
             <Link href="/rewards" data-testid="rewards-btn">
               <button
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-white text-sm font-bold transition-all hover:scale-105"
-                style={{
-                  background: "rgba(255,255,255,0.18)",
-                  border: "1px solid rgba(255,255,255,0.3)",
-                  backdropFilter: "blur(8px)",
-                }}
-              >
-                Rewards
-              </button>
+                aria-label="How it works"
+                className="px-10 py-5 rounded-xl"
+                style={{ background: "transparent", border: "none", cursor: "pointer" }}
+              />
             </Link>
           </div>
         </div>
@@ -164,17 +155,10 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Games — 3 only */}
+      {/* Games */}
       <section className="px-3 mb-4" data-testid="games-section">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-white font-bold text-base">Games</h2>
-          <Link
-            href="/games"
-            className="flex items-center gap-1 text-violet-400 text-xs font-medium"
-            data-testid="games-view-all"
-          >
-            View all <ChevronRight size={14} />
-          </Link>
         </div>
         <div className="grid grid-cols-3 gap-2">
           {GAMES.map((game, i) => (

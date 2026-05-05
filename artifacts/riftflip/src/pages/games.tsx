@@ -1,26 +1,10 @@
-import { useLocation, Link } from "wouter";
+import { useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { CheckCircle } from "lucide-react";
 
 const GAMES = [
-  {
-    slug: "coinflip",
-    name: "Coinflip",
-    icon: "🪙",
-    desc: "Flip a coin against another player",
-  },
-  {
-    slug: "jackpot",
-    name: "Jackpot",
-    icon: "🏆",
-    desc: "Pool your Robux for a chance to win it all",
-  },
-  {
-    slug: "minefield",
-    name: "Minefield",
-    icon: "💣",
-    desc: "Avoid mines, collect gems",
-  },
+  { slug: "coinflip", name: "Coinflip", icon: "🪙" },
+  { slug: "jackpot", name: "Jackpot", icon: "🔥" },
+  { slug: "minefield", name: "Minefield", icon: "💣" },
 ];
 
 export default function Games() {
@@ -47,7 +31,7 @@ export default function Games() {
         {GAMES.map((game, i) => {
           const isActive = location === `/game/${game.slug}`;
           return (
-            <Link key={game.slug} href={`/game/${game.slug}`}>
+            <a key={game.slug} href={`/game/${game.slug}`}>
               <motion.div
                 whileTap={{ scale: 0.98 }}
                 className="flex items-center gap-4 px-5 py-4 cursor-pointer relative transition-colors"
@@ -62,51 +46,45 @@ export default function Games() {
                 }}
                 data-testid={`game-row-${game.slug}`}
               >
-                {/* Left accent bar when active */}
                 {isActive && (
                   <div
                     className="absolute left-0 top-0 bottom-0 w-1 rounded-r"
-                    style={{ background: "#818cf8" }}
+                    style={{ background: "#e97c2e" }}
                   />
                 )}
 
-                {/* Icon */}
                 <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-xl"
+                  className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
                   style={{
+                    fontSize: "20px",
                     background: isActive
-                      ? "rgba(99,102,241,0.3)"
+                      ? "rgba(233,124,46,0.18)"
                       : "rgba(255,255,255,0.06)",
-                    border: `1px solid ${isActive ? "rgba(129,140,248,0.5)" : "rgba(255,255,255,0.08)"}`,
+                    border: `1px solid ${isActive ? "rgba(233,124,46,0.38)" : "rgba(255,255,255,0.08)"}`,
                   }}
                 >
                   {game.icon}
                 </div>
 
-                {/* Text */}
                 <div className="flex-1 min-w-0">
                   <p
                     className="font-bold text-base"
-                    style={{ color: isActive ? "#a5b4fc" : "#e2e8f0" }}
+                    style={{ color: isActive ? "#f0a060" : "#e2e8f0" }}
                   >
                     {game.name}
                   </p>
-                  <p className="text-slate-500 text-xs truncate">{game.desc}</p>
                 </div>
 
-                {/* Arrow */}
-                <span
-                  className="text-lg"
-                  style={{ color: isActive ? "#818cf8" : "#334155" }}
-                >
-                  ›
-                </span>
+                {isActive && (
+                  <span className="text-xs font-bold" style={{ color: "#4ade80" }}>
+                    1.1
+                  </span>
+                )}
               </motion.div>
-            </Link>
+            </a>
           );
         })}
 
-        {/* Footer badge */}
         <div
           className="flex items-center justify-center gap-2 px-5 py-3"
           style={{
@@ -114,7 +92,7 @@ export default function Games() {
             borderTop: "1px solid rgba(16,185,129,0.2)",
           }}
         >
-          <CheckCircle size={15} className="text-green-400" />
+          <span className="text-green-400" style={{ fontSize: "15px" }}>🟢</span>
           <span className="text-green-400 text-sm font-semibold">
             0% House Edge
           </span>
