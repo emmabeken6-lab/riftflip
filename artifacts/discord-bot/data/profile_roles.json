@@ -1,0 +1,16 @@
+{
+  "1478390666261299220": {
+    "badge_role": null,
+    "bio_badword_action": "warn",
+    "bio_badwords": [
+      "asoumi"
+    ],
+    "status_roles": [
+      {
+        "trigger": "sleeping",
+        "role_id": 1499608119297183774,
+        "remove_when_gone": true
+      }
+    ]
+  }
+}

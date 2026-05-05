@@ -1,0 +1,36 @@
+{
+  "1478390666261299220": {
+    "anti_link": true,
+    "anti_nuke": true,
+    "automod_badwords": true,
+    "automod_spam": true,
+    "bad_words": [
+      "nigger",
+      "nigga",
+      "faggot",
+      "chink",
+      "spic",
+      "kike",
+      "cunt",
+      "fuck",
+      "fake,scam,porn,nudes,fuck,"
+    ],
+    "automod_caps": true,
+    "prefix": ".",
+    "welcome_channel": 1478984752101986314,
+    "welcome_message": "Welcome to the community,  \ud83c\udf8a You are our  member. We're glad to have you her\nPlease visit <#1478980404491976766> for giveaways\n\nVisit <#1478980631269740625> for our website \n\nEnjoy !",
+    "leave_channel": 1478984752101986314,
+    "leave_message": "Bye to the community, \ud83c\udf8a You were incredible member. We're glad to have you back.please come visit",
+    "level_roles": {
+      "5": 1499825752919511200
+    },
+    "verification": {
+      "log_channel": "1479090014167236811",
+      "verified_role": "1500000921977880596",
+      "unverified_role": "1479075117685407806",
+      "alt_log_channel": "1479090014167236811",
+      "verify_channel": "1499786816520192001"
+    },
+    "coinflip_channel": "1478981636241494109"
+  }
+}

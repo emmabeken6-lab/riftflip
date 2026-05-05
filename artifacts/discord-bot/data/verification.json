@@ -1,0 +1,101 @@
+{
+  "1478390666261299220": {
+    "1456385131630563498": {
+      "verified": true,
+      "verified_at": "2026-05-02T05:09:22.041916+00:00",
+      "username": "kai_nill",
+      "display_name": "Nill",
+      "account_created": "2026-01-01T20:34:33.708000+00:00",
+      "account_age_days": 120,
+      "joined_at": "2026-03-03T13:56:42.129000+00:00",
+      "avatar": "https://cdn.discordapp.com/avatars/1456385131630563498/a34939752a36451b0c397a08bb5c64b8.png?size=1024",
+      "default_avatar": false,
+      "bot": false,
+      "flags": [],
+      "roles": [
+        "1499608374122385610",
+        "1479074923547988003"
+      ]
+    },
+    "1499150067448283318": {
+      "verified": true,
+      "verified_at": "2026-05-02T05:38:06.406056+00:00",
+      "username": "layskay",
+      "display_name": "Lays Kay",
+      "account_created": "2026-04-29T20:47:08.941000+00:00",
+      "account_age_days": 2,
+      "joined_at": "2026-05-02T05:29:09.495000+00:00",
+      "avatar": "https://cdn.discordapp.com/avatars/1499150067448283318/528c85a18f7f8f26b000e31550fe3c90.png?size=1024",
+      "default_avatar": false,
+      "bot": false,
+      "flags": [],
+      "roles": [
+        "1479075117685407806"
+      ]
+    },
+    "1499151302180208710": {
+      "verified": true,
+      "verified_at": "2026-05-02T06:07:16.246111+00:00",
+      "username": "lezlix.",
+      "display_name": "Lez Lix",
+      "account_created": "2026-04-29T20:52:03.324000+00:00",
+      "account_age_days": 2,
+      "joined_at": "2026-05-02T06:07:13.428000+00:00",
+      "avatar": "https://cdn.discordapp.com/embed/avatars/0.png",
+      "default_avatar": true,
+      "bot": false,
+      "flags": [],
+      "roles": []
+    },
+    "1487407758746849382": {
+      "verified": true,
+      "verified_at": "2026-05-02T06:13:42.496828+00:00",
+      "username": "zssty",
+      "display_name": "zty",
+      "account_created": "2026-03-28T11:07:24.385000+00:00",
+      "account_age_days": 34,
+      "joined_at": "2026-05-01T15:02:25.715000+00:00",
+      "avatar": "https://cdn.discordapp.com/avatars/1487407758746849382/3b33c67d96a369f26161426c678e1d3e.png?size=1024",
+      "default_avatar": false,
+      "bot": false,
+      "flags": [],
+      "roles": [
+        "1499757863092879421",
+        "1479075117685407806"
+      ]
+    },
+    "1322348346693652511": {
+      "verified": true,
+      "verified_at": "2026-05-02T07:04:08.327484+00:00",
+      "username": "saraware",
+      "display_name": "sara",
+      "account_created": "2024-12-27T23:40:13.896000+00:00",
+      "account_age_days": 490,
+      "joined_at": "2026-05-01T13:00:31.731000+00:00",
+      "avatar": "https://cdn.discordapp.com/avatars/1322348346693652511/2e3e99ffea709570b482cf6e7ea22b5b.png?size=1024",
+      "default_avatar": false,
+      "bot": false,
+      "flags": [],
+      "roles": [
+        "1499757863092879421",
+        "1479075117685407806"
+      ]
+    },
+    "1442893625980620844": {
+      "verified": true,
+      "verified_at": "2026-05-02T07:08:06.071464+00:00",
+      "username": "princefurous",
+      "display_name": "trees",
+      "account_created": "2025-11-25T15:04:08.101000+00:00",
+      "account_age_days": 157,
+      "joined_at": "2026-05-01T10:33:47.698000+00:00",
+      "avatar": "https://cdn.discordapp.com/avatars/1442893625980620844/98cfab7beb789223ae295223871399ee.png?size=1024",
+      "default_avatar": false,
+      "bot": false,
+      "flags": [],
+      "roles": [
+        "1479075117685407806"
+      ]
+    }
+  }
+}
