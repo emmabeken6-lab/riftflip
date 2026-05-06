@@ -65,7 +65,7 @@ router.post("/admin/users/:id/give-tokens", requireAdmin, (req, res) => {
   const user = users.get(id);
   if (!user) { res.status(404).json({ error: "User not found" }); return; }
   user.balance += Number(amount);
-  addActivity({ action: "give_tokens", adminId: req.user!.id, adminName: req.user!.username, targetId: id, targetName: user.username, details: `Gave R$ ${amount} tokens (new balance: R$ ${user.balance})` });
+  addActivity({ action: "give_tokens", adminId: req.user!.id, adminName: req.user!.username, targetId: id, targetName: user.username, details: `Gave 🪙 ${amount} tokens (new balance: 🪙 ${user.balance})` });
   res.json({ ok: true, user });
 });
 
@@ -159,18 +159,18 @@ router.get("/admin/anti-alt/:userId", requireAdmin, (req, res) => {
 });
 
 router.post("/admin/payments/mow/confirm", requireAdmin, (req, res) => {
-  const { userId, robuxAmount, txId } = req.body as { userId?: string; robuxAmount?: number; txId?: string };
-  if (!userId || !robuxAmount || !txId) { res.status(400).json({ error: "userId, robuxAmount, txId required" }); return; }
+  const { userId, tokenAmount, txId } = req.body as { userId?: string; tokenAmount?: number; txId?: string };
+  if (!userId || !tokenAmount || !txId) { res.status(400).json({ error: "userId, tokenAmount, txId required" }); return; }
   const user = users.get(userId);
   if (!user) { res.status(404).json({ error: "User not found" }); return; }
-  user.balance += Number(robuxAmount);
+  user.balance += Number(tokenAmount);
   paymentLogs.unshift({
     id: txId,
     userId,
     username: user.username,
-    priceAmount: robuxAmount,
-    payCurrency: "robux",
-    payAmount: robuxAmount,
+    priceAmount: tokenAmount,
+    payCurrency: "manual",
+    payAmount: tokenAmount,
     status: "finished",
     createdAt: new Date().toISOString(),
   });
@@ -180,7 +180,7 @@ router.post("/admin/payments/mow/confirm", requireAdmin, (req, res) => {
     adminName: req.user!.username,
     targetId: userId,
     targetName: user.username,
-    details: `MowPayments deposit confirmed: R$ ${robuxAmount} (TX: ${txId})`,
+    details: `Manual deposit confirmed: 🪙 ${tokenAmount} tokens (TX: ${txId})`,
   });
   res.json({ ok: true, newBalance: user.balance });
 });

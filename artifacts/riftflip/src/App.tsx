@@ -17,6 +17,7 @@ import MinefieldGame from "@/pages/game/minefield";
 import Profile from "@/pages/profile";
 import SignIn from "@/pages/sign-in";
 import AdminPanel from "@/pages/admin";
+import TipsPage from "@/pages/tips";
 import SplashScreen from "@/components/SplashScreen";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,7 @@ function Router() {
       <Route path="/profile" component={Profile} />
       <Route path="/sign-in" component={SignIn} />
       <Route path="/admin" component={AdminPanel} />
+      <Route path="/wallet/tips" component={TipsPage} />
       <Route component={NotFound} />
     </Switch>
   );

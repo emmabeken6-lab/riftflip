@@ -8,7 +8,8 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-const ROBUX_TO_USD = 0.0035;
+/** $1 USD = 20 tokens */
+const USD_PER_TOKEN = 0.05;
 
 const SUPPORTED_COINS = [
   { symbol: "BTC", name: "Bitcoin", emoji: "₿", color: "#f7931a" },
@@ -45,7 +46,7 @@ function CopyBtn({ text }: { text: string }) {
 
 function DepositFlow({ onBack, onDone }: { onBack: () => void; onDone: () => void }) {
   const [step, setStep] = useState<"amount" | "coin" | "address">("amount");
-  const [robuxAmount, setRobuxAmount] = useState("");
+  const [tokenAmount, setTokenAmount] = useState("");
   const [selectedCoin, setSelectedCoin] = useState<typeof SUPPORTED_COINS[0] | null>(null);
   const [payment, setPayment] = useState<PaymentData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -61,14 +62,13 @@ function DepositFlow({ onBack, onDone }: { onBack: () => void; onDone: () => voi
   }, []);
 
   const createPayment = async () => {
-    if (!selectedCoin || !robuxAmount) return;
+    if (!selectedCoin || !tokenAmount) return;
     setLoading(true); setError("");
-    const usdAmount = Math.max(1, Math.round(Number(robuxAmount) * ROBUX_TO_USD * 100) / 100);
     try {
       const r = await fetch("/api/payments/create", {
         method: "POST", credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ payCurrency: selectedCoin.symbol.toLowerCase(), priceAmount: usdAmount }),
+        body: JSON.stringify({ payCurrency: selectedCoin.symbol.toLowerCase(), tokenAmount: Number(tokenAmount) }),
       });
       const d = await r.json() as PaymentData & { error?: string };
       if (d.error) throw new Error(d.error);
@@ -89,7 +89,7 @@ function DepositFlow({ onBack, onDone }: { onBack: () => void; onDone: () => voi
     } catch { setCheckStatus("error"); }
   };
 
-  const usdValue = robuxAmount ? (Number(robuxAmount) * ROBUX_TO_USD).toFixed(2) : "0.00";
+  const usdValue = tokenAmount ? (Number(tokenAmount) * USD_PER_TOKEN).toFixed(2) : "0.00";
 
   return (
     <div className="px-4 py-4">
@@ -109,28 +109,33 @@ function DepositFlow({ onBack, onDone }: { onBack: () => void; onDone: () => voi
         </div>
       )}
 
+      <div className="mb-4 p-3 rounded-xl flex gap-2" style={{ background: "#0a1a0a", border: "1px solid #1a3a1a" }}>
+        <span className="text-green-500 text-sm">🪙</span>
+        <p className="text-green-600 text-xs">Rate: <strong className="text-green-400">$1 USD = 20 tokens</strong>. Funds auto-credited after blockchain confirmation.</p>
+      </div>
+
       <AnimatePresence mode="wait">
         {step === "amount" && (
           <motion.div key="amount" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }}>
             <p className="text-slate-400 text-sm mb-3">How many tokens to deposit?</p>
             <div className="flex items-center gap-3 px-4 py-3 rounded-xl mb-3" style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}>
               <span className="text-violet-400 font-bold text-lg">🪙</span>
-              <input type="number" value={robuxAmount} onChange={(e) => setRobuxAmount(e.target.value)}
+              <input type="number" value={tokenAmount} onChange={(e) => setTokenAmount(e.target.value)}
                 placeholder="0" className="flex-1 bg-transparent text-white text-2xl font-black outline-none" />
             </div>
-            {robuxAmount && <p className="text-slate-600 text-xs text-center mb-3">≈ ${usdValue} USD</p>}
+            {tokenAmount && <p className="text-slate-600 text-xs text-center mb-3">≈ ${usdValue} USD</p>}
             <div className="grid grid-cols-3 gap-2 mb-5">
               {QUICK_AMOUNTS.map((amt) => (
-                <button key={amt} onClick={() => setRobuxAmount(String(amt))}
+                <button key={amt} onClick={() => setTokenAmount(String(amt))}
                   className="py-2 rounded-lg text-xs font-bold"
-                  style={{ background: robuxAmount === String(amt) ? "#2a1f44" : "#1a1a1a", border: robuxAmount === String(amt) ? "1px solid #7c3aed" : "1px solid #2a2a2a", color: robuxAmount === String(amt) ? "#c4b5fd" : "#555" }}>
-                  {amt >= 1000 ? `${amt / 1000}K` : amt}
+                  style={{ background: tokenAmount === String(amt) ? "#2a1f44" : "#1a1a1a", border: tokenAmount === String(amt) ? "1px solid #7c3aed" : "1px solid #2a2a2a", color: tokenAmount === String(amt) ? "#c4b5fd" : "#555" }}>
+                  🪙 {amt >= 1000 ? `${amt / 1000}K` : amt}
                 </button>
               ))}
             </div>
-            <button onClick={() => setStep("coin")} disabled={!robuxAmount || !Number(robuxAmount)}
+            <button onClick={() => setStep("coin")} disabled={!tokenAmount || !Number(tokenAmount)}
               className="w-full py-3.5 rounded-xl text-white font-bold hover:opacity-90 transition-opacity"
-              style={{ background: robuxAmount ? "#7c3aed" : "#1e1e1e", color: robuxAmount ? "#fff" : "#444" }}>
+              style={{ background: tokenAmount ? "#7c3aed" : "#1e1e1e", color: tokenAmount ? "#fff" : "#444" }}>
               Choose Payment Method →
             </button>
           </motion.div>
@@ -138,7 +143,8 @@ function DepositFlow({ onBack, onDone }: { onBack: () => void; onDone: () => voi
 
         {step === "coin" && (
           <motion.div key="coin" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }}>
-            <p className="text-slate-400 text-sm mb-3">Choose cryptocurrency</p>
+            <p className="text-slate-400 text-sm mb-1">Choose cryptocurrency</p>
+            <p className="text-slate-600 text-xs mb-3">You will pay ≈ ${usdValue} USD for 🪙 {Number(tokenAmount).toLocaleString()} tokens</p>
             <div className="grid grid-cols-2 gap-2 mb-5">
               {SUPPORTED_COINS.map((coin) => (
                 <button key={coin.symbol} onClick={() => setSelectedCoin(coin)}
@@ -165,7 +171,7 @@ function DepositFlow({ onBack, onDone }: { onBack: () => void; onDone: () => voi
           <motion.div key="address" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }}>
             <div className="p-4 rounded-xl mb-4 text-center" style={{ background: "#0a1f14", border: "1px solid #1a5a2a" }}>
               <p className="text-green-400 font-bold text-sm mb-0.5">Payment address generated!</p>
-              <p className="text-slate-500 text-xs">Send exactly the amount shown below</p>
+              <p className="text-slate-500 text-xs">Send exactly the amount shown. You will receive 🪙 {Number(tokenAmount).toLocaleString()} tokens.</p>
             </div>
             <div className="p-4 rounded-xl mb-3" style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}>
               <p className="text-slate-500 text-xs mb-1">Send exactly</p>
@@ -208,11 +214,11 @@ function WithdrawFlow({ onBack, balance }: { onBack: () => void; balance: number
   const [step, setStep] = useState<"amount" | "address" | "submitted">("amount");
   const [amount, setAmount] = useState("");
   const [address, setAddress] = useState("");
-  const [coin, setCoin] = useState<typeof SUPPORTED_COINS[0]>(SUPPORTED_COINS[0]);
+  const [coin, setCoin] = useState<typeof SUPPORTED_COINS[0]>(SUPPORTED_COINS[0]!);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const usdValue = amount ? (Number(amount) * ROBUX_TO_USD).toFixed(2) : "0.00";
+  const usdValue = amount ? (Number(amount) * USD_PER_TOKEN).toFixed(2) : "0.00";
   const maxAmount = balance;
 
   const submit = async () => {
@@ -222,7 +228,7 @@ function WithdrawFlow({ onBack, balance }: { onBack: () => void; balance: number
       const r = await fetch("/api/payments/withdraw", {
         method: "POST", credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ robuxAmount: Number(amount), withdrawAddress: address, currency: coin.symbol.toLowerCase() }),
+        body: JSON.stringify({ tokenAmount: Number(amount), withdrawAddress: address, currency: coin.symbol.toLowerCase() }),
       });
       const d = await r.json() as { error?: string };
       if (d.error) throw new Error(d.error);
@@ -240,11 +246,16 @@ function WithdrawFlow({ onBack, balance }: { onBack: () => void; balance: number
         <h2 className="text-white font-black text-lg">Withdraw</h2>
       </div>
 
+      <div className="mb-4 p-3 rounded-xl flex gap-2" style={{ background: "#0a1a0a", border: "1px solid #1a3a1a" }}>
+        <span className="text-green-500 text-sm">🪙</span>
+        <p className="text-green-600 text-xs">Rate: <strong className="text-green-400">20 tokens = $1 USD</strong></p>
+      </div>
+
       <AnimatePresence mode="wait">
         {step === "amount" && (
           <motion.div key="amt" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }}>
             <p className="text-slate-400 text-sm mb-1">Amount to withdraw</p>
-            <p className="text-slate-600 text-xs mb-3">Available: {balance.toLocaleString()} tokens (≈ ${(balance * ROBUX_TO_USD).toFixed(2)} USD)</p>
+            <p className="text-slate-600 text-xs mb-3">Available: 🪙 {balance.toLocaleString()} tokens (≈ ${(balance * USD_PER_TOKEN).toFixed(2)} USD)</p>
             <div className="flex items-center gap-3 px-4 py-3 rounded-xl mb-3" style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}>
               <span className="text-violet-400 font-bold text-lg">🪙</span>
               <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} max={maxAmount}
@@ -286,7 +297,7 @@ function WithdrawFlow({ onBack, balance }: { onBack: () => void; balance: number
         {step === "address" && (
           <motion.div key="addr" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }}>
             <p className="text-slate-400 text-sm mb-1">Your {coin.symbol} address</p>
-            <p className="text-slate-600 text-xs mb-3">We will send {amount} tokens (≈ ${usdValue}) to this address</p>
+            <p className="text-slate-600 text-xs mb-3">We will send 🪙 {Number(amount).toLocaleString()} tokens (≈ ${usdValue} USD) to this address</p>
             <textarea
               value={address}
               onChange={(e) => setAddress(e.target.value)}
@@ -303,7 +314,7 @@ function WithdrawFlow({ onBack, balance }: { onBack: () => void; balance: number
             <button onClick={submit} disabled={!address.trim() || loading}
               className="w-full py-3.5 rounded-xl text-white font-bold hover:opacity-90 flex items-center justify-center gap-2"
               style={{ background: address && !loading ? "#7c3aed" : "#1e1e1e", color: address ? "#fff" : "#444" }}>
-              {loading ? <><Loader2 size={15} className="animate-spin" /> Submitting…</> : `Withdraw ${Number(amount).toLocaleString()} tokens`}
+              {loading ? <><Loader2 size={15} className="animate-spin" /> Submitting…</> : `Withdraw 🪙 ${Number(amount).toLocaleString()} tokens`}
             </button>
           </motion.div>
         )}
@@ -328,7 +339,7 @@ export default function Wallet() {
   const { isSignedIn, isLoading, user, refetch } = useAuth();
 
   const balance = user?.balance ?? 0;
-  const usdBalance = (balance * ROBUX_TO_USD).toFixed(2);
+  const usdBalance = (balance * USD_PER_TOKEN).toFixed(2);
 
   if (!isLoading && !isSignedIn) {
     return (
@@ -358,7 +369,6 @@ export default function Wallet() {
       <AnimatePresence mode="wait">
         {view === "main" && (
           <motion.div key="main" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            {/* Header */}
             <div className="px-4 pt-5 pb-4 flex items-center justify-between" style={{ borderBottom: "1px solid #1a1a1a" }}>
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}>
@@ -376,7 +386,6 @@ export default function Wallet() {
               )}
             </div>
 
-            {/* Balance card */}
             <div className="px-4 pt-4">
               <div
                 className="p-5 rounded-2xl relative overflow-hidden mb-4"
@@ -393,7 +402,8 @@ export default function Wallet() {
                   {isLoading ? "—" : balance.toLocaleString()}
                   <span className="text-lg text-slate-500 font-semibold ml-2">tokens</span>
                 </p>
-                <p className="text-slate-600 text-sm mb-5">≈ ${isLoading ? "0.00" : usdBalance} USD</p>
+                <p className="text-slate-600 text-sm mb-1">≈ ${isLoading ? "0.00" : usdBalance} USD</p>
+                <p className="text-slate-700 text-xs mb-5">$1 = 20 tokens</p>
                 <div className="flex gap-3">
                   <button
                     onClick={() => setView("deposit")}
@@ -416,7 +426,6 @@ export default function Wallet() {
                 </div>
               </div>
 
-              {/* Section cards */}
               <div className="space-y-3">
                 <Link href="/wallet/tips">
                   <div
@@ -428,7 +437,7 @@ export default function Wallet() {
                     </div>
                     <div className="flex-1">
                       <p className="text-white font-bold text-sm">Tips History</p>
-                      <p className="text-slate-600 text-xs">View sent &amp; received</p>
+                      <p className="text-slate-600 text-xs">View sent &amp; received tips</p>
                     </div>
                     <ChevronRight size={16} className="text-slate-700" />
                   </div>

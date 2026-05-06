@@ -55,11 +55,54 @@ export interface LoginLog {
   createdAt: string;
 }
 
+export interface TipLog {
+  id: string;
+  fromId: string;
+  fromName: string;
+  toId: string;
+  toName: string;
+  amount: number;
+  createdAt: string;
+}
+
+export interface RainEvent {
+  id: string;
+  adminId: string;
+  adminName: string;
+  totalAmount: number;
+  requirements: { minLevel?: number; minMessages?: number };
+  durationMs: number;
+  startedAt: string;
+  endsAt: string;
+  joiners: string[];
+  joinerNames: Record<string, string>;
+  status: "active" | "ended";
+  tokensPerUser?: number;
+}
+
+export interface GiveawayRecord {
+  id: string;
+  adminId: string;
+  adminName: string;
+  prize: number;
+  requirements: { minLevel?: number; minMessages?: number };
+  endsAt: string;
+  entrants: string[];
+  entrantNames: Record<string, string>;
+  winnerId?: string;
+  winnerName?: string;
+  status: "active" | "ended";
+  createdAt: string;
+}
+
 export const users = new Map<string, UserRecord>();
 export const roles = new Map<string, RoleRecord>();
 export const paymentLogs: PaymentLog[] = [];
 export const activityLogs: ActivityLog[] = [];
 export const loginLogs: LoginLog[] = [];
+export const tipLogs: TipLog[] = [];
+export const rainEvents: RainEvent[] = [];
+export const giveaways: GiveawayRecord[] = [];
 
 // Seed default roles
 roles.set("member", { id: "member", name: "Member", color: "#6b7280", icon: "👤", permissions: [], createdAt: new Date().toISOString() });
@@ -108,5 +151,43 @@ export function verifyIpnSignature(body: string, signature: string): boolean {
     return computed === signature;
   } catch {
     return false;
+  }
+}
+
+/** Auto-end rain events whose timer has expired and distribute tokens */
+export function processExpiredRains() {
+  const now = Date.now();
+  for (const rain of rainEvents) {
+    if (rain.status === "active" && new Date(rain.endsAt).getTime() <= now) {
+      endRain(rain.id);
+    }
+  }
+}
+
+export function endRain(rainId: string) {
+  const rain = rainEvents.find((r) => r.id === rainId);
+  if (!rain || rain.status === "ended") return;
+  rain.status = "ended";
+  if (rain.joiners.length > 0) {
+    const perUser = Math.floor(rain.totalAmount / rain.joiners.length);
+    rain.tokensPerUser = perUser;
+    for (const uid of rain.joiners) {
+      const u = users.get(uid);
+      if (u) u.balance += perUser;
+    }
+    addActivity({
+      action: "rain_ended",
+      adminId: rain.adminId,
+      adminName: rain.adminName,
+      details: `Rain ended: ${rain.joiners.length} users each received 🪙 ${perUser} tokens (total: 🪙 ${rain.totalAmount})`,
+    });
+  } else {
+    rain.tokensPerUser = 0;
+    addActivity({
+      action: "rain_ended",
+      adminId: rain.adminId,
+      adminName: rain.adminName,
+      details: `Rain ended with no participants — 🪙 ${rain.totalAmount} tokens returned`,
+    });
   }
 }

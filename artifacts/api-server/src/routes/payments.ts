@@ -7,21 +7,16 @@ const router = Router();
 
 const NOWPAYMENTS_API_KEY = process.env["NOWPAYMENTS_API_KEY"] ?? "";
 const NOWPAYMENTS_BASE = "https://api.nowpayments.io/v1";
-const MOWPAYMENTS_API_KEY = process.env["MOWPAYMENTS_API_KEY"] ?? "";
-const MOWPAYMENTS_BASE = "https://api.mowpayments.com/v1";
+
+/** $1 USD = 20 tokens */
+const TOKENS_PER_USD = 20;
 
 function nowHeaders() {
   return { "x-api-key": NOWPAYMENTS_API_KEY, "Content-Type": "application/json" };
 }
-function mowHeaders() {
-  return { "Authorization": `Bearer ${MOWPAYMENTS_API_KEY}`, "Content-Type": "application/json" };
-}
 
 router.get("/payments/status", (_req, res) => {
-  res.json({
-    configured: !!NOWPAYMENTS_API_KEY,
-    mowConfigured: !!MOWPAYMENTS_API_KEY,
-  });
+  res.json({ configured: !!NOWPAYMENTS_API_KEY });
 });
 
 router.get("/payments/currencies", async (_req, res) => {
@@ -48,11 +43,13 @@ router.post("/payments/create", async (req, res) => {
     res.status(401).json({ error: "Not authenticated" });
     return;
   }
-  const { payCurrency, priceAmount } = req.body as { payCurrency?: string; priceAmount?: number };
-  if (!payCurrency || !priceAmount || priceAmount <= 0) {
-    res.status(400).json({ error: "payCurrency and priceAmount are required" });
+  const { payCurrency, tokenAmount } = req.body as { payCurrency?: string; tokenAmount?: number };
+  if (!payCurrency || !tokenAmount || tokenAmount <= 0) {
+    res.status(400).json({ error: "payCurrency and tokenAmount are required" });
     return;
   }
+
+  const usdAmount = Math.max(1, Math.round((tokenAmount / TOKENS_PER_USD) * 100) / 100);
 
   const domains = (process.env["REPLIT_DOMAINS"] ?? "").split(",");
   const primaryDomain = domains[0]?.trim() ?? "";
@@ -60,11 +57,11 @@ router.post("/payments/create", async (req, res) => {
 
   try {
     const body = {
-      price_amount: priceAmount,
+      price_amount: usdAmount,
       price_currency: "usd",
       pay_currency: payCurrency.toLowerCase(),
       order_id: `rift-${req.user.id}-${Date.now()}`,
-      order_description: `Riftflip deposit for ${req.user.username}`,
+      order_description: `Riftflip deposit for ${req.user.username} (${tokenAmount} tokens)`,
       ipn_callback_url: `${baseUrl}/api/payments/ipn`,
       success_url: `${baseUrl}/wallet?deposit=success`,
       cancel_url: `${baseUrl}/wallet?deposit=cancelled`,
@@ -88,7 +85,7 @@ router.post("/payments/create", async (req, res) => {
       id: data.payment_id ?? `local-${Date.now()}`,
       userId: req.user.id,
       username: req.user.username,
-      priceAmount,
+      priceAmount: tokenAmount,
       payCurrency: data.pay_currency ?? payCurrency,
       payAmount: data.pay_amount ?? 0,
       status: data.payment_status ?? "waiting",
@@ -137,82 +134,6 @@ router.get("/payments/check/:paymentId", async (req, res) => {
   }
 });
 
-/* ── MowPayments (Robux) ── */
-
-router.post("/payments/mow/create", async (req, res) => {
-  if (!req.isAuthenticated?.() || !req.user) {
-    res.status(401).json({ error: "Not authenticated" });
-    return;
-  }
-  const { robuxAmount } = req.body as { robuxAmount?: number };
-  if (!robuxAmount || robuxAmount <= 0) {
-    res.status(400).json({ error: "robuxAmount is required" });
-    return;
-  }
-
-  const orderId = `mow-${req.user.id}-${Date.now()}`;
-
-  if (MOWPAYMENTS_API_KEY) {
-    try {
-      const r = await fetch(`${MOWPAYMENTS_BASE}/payments`, {
-        method: "POST",
-        headers: mowHeaders(),
-        body: JSON.stringify({
-          amount: robuxAmount,
-          currency: "robux",
-          order_id: orderId,
-          description: `Riftflip deposit for ${req.user.username}`,
-        }),
-      });
-      const data = await r.json() as {
-        id?: string;
-        trade_url?: string;
-        status?: string;
-        error?: string;
-      };
-      if (data.error) { res.status(400).json({ error: data.error }); return; }
-      paymentLogs.unshift({
-        id: data.id ?? orderId,
-        userId: req.user.id,
-        username: req.user.username,
-        priceAmount: robuxAmount,
-        payCurrency: "robux",
-        payAmount: robuxAmount,
-        status: data.status ?? "waiting",
-        createdAt: new Date().toISOString(),
-      });
-      res.json({ orderId: data.id ?? orderId, tradeUrl: data.trade_url, robuxAmount, status: data.status ?? "waiting" });
-      return;
-    } catch (err) {
-      logger.error({ err }, "MowPayments create error");
-    }
-  }
-
-  paymentLogs.unshift({
-    id: orderId,
-    userId: req.user.id,
-    username: req.user.username,
-    priceAmount: robuxAmount,
-    payCurrency: "robux",
-    payAmount: robuxAmount,
-    status: "pending_manual",
-    createdAt: new Date().toISOString(),
-  });
-  res.json({
-    orderId,
-    robuxAmount,
-    status: "pending_manual",
-    instructions: `Send R$ ${robuxAmount} Robux via Roblox trade or gamepass. Use order ID: ${orderId} as the trade note. An admin will confirm and credit your balance.`,
-  });
-});
-
-router.get("/payments/mow/check/:orderId", async (req, res) => {
-  const { orderId } = req.params;
-  const log = paymentLogs.find((p) => p.id === orderId);
-  if (!log) { res.status(404).json({ error: "Order not found" }); return; }
-  res.json({ orderId, status: log.status, robuxAmount: log.priceAmount });
-});
-
 /* ── NowPayments Payout (Withdraw) ── */
 
 router.post("/payments/withdraw", async (req, res) => {
@@ -220,22 +141,22 @@ router.post("/payments/withdraw", async (req, res) => {
     res.status(401).json({ error: "Not authenticated" });
     return;
   }
-  const { robuxAmount, withdrawAddress, currency } = req.body as {
-    robuxAmount?: number;
+  const { tokenAmount, withdrawAddress, currency } = req.body as {
+    tokenAmount?: number;
     withdrawAddress?: string;
     currency?: string;
   };
-  if (!robuxAmount || robuxAmount <= 0 || !withdrawAddress || !currency) {
-    res.status(400).json({ error: "robuxAmount, withdrawAddress, and currency are required" });
+  if (!tokenAmount || tokenAmount <= 0 || !withdrawAddress || !currency) {
+    res.status(400).json({ error: "tokenAmount, withdrawAddress, and currency are required" });
     return;
   }
   const user = users.get(req.user.id);
-  if (!user || user.balance < robuxAmount) {
+  if (!user || user.balance < tokenAmount) {
     res.status(400).json({ error: "Insufficient balance" });
     return;
   }
 
-  const usdAmount = Math.round(robuxAmount * 0.0035 * 100) / 100;
+  const usdAmount = Math.round((tokenAmount / TOKENS_PER_USD) * 100) / 100;
 
   if (NOWPAYMENTS_API_KEY) {
     try {
@@ -253,12 +174,12 @@ router.post("/payments/withdraw", async (req, res) => {
       });
       const data = await r.json() as { id?: string; error?: string };
       if (!data.error) {
-        user.balance -= robuxAmount;
+        user.balance -= tokenAmount;
         paymentLogs.unshift({
           id: data.id ?? `withdraw-${Date.now()}`,
           userId: req.user.id,
           username: req.user.username,
-          priceAmount: robuxAmount,
+          priceAmount: tokenAmount,
           payCurrency: currency,
           payAmount: usdAmount,
           status: "processing",
@@ -270,7 +191,7 @@ router.post("/payments/withdraw", async (req, res) => {
           adminName: "NowPayments",
           targetId: req.user.id,
           targetName: req.user.username,
-          details: `Withdrawal: R$ ${robuxAmount} tokens → $${usdAmount} USD in ${currency.toUpperCase()} to ${withdrawAddress.slice(0, 10)}…`,
+          details: `Withdrawal: 🪙 ${tokenAmount} tokens → $${usdAmount} USD in ${currency.toUpperCase()} to ${withdrawAddress.slice(0, 10)}…`,
         });
         res.json({ ok: true, id: data.id });
         return;
@@ -281,13 +202,13 @@ router.post("/payments/withdraw", async (req, res) => {
   }
 
   // Fallback: manual withdrawal request
-  user.balance -= robuxAmount;
+  user.balance -= tokenAmount;
   const wdId = `wd-${req.user.id}-${Date.now()}`;
   paymentLogs.unshift({
     id: wdId,
     userId: req.user.id,
     username: req.user.username,
-    priceAmount: robuxAmount,
+    priceAmount: tokenAmount,
     payCurrency: currency,
     payAmount: usdAmount,
     status: "pending_manual",
@@ -299,7 +220,7 @@ router.post("/payments/withdraw", async (req, res) => {
     adminName: "System",
     targetId: req.user.id,
     targetName: req.user.username,
-    details: `Manual withdrawal request: R$ ${robuxAmount} tokens → ${currency.toUpperCase()} to ${withdrawAddress.slice(0, 10)}…`,
+    details: `Manual withdrawal: 🪙 ${tokenAmount} tokens → ${currency.toUpperCase()} to ${withdrawAddress.slice(0, 10)}…`,
   });
   res.json({ ok: true, id: wdId, manual: true });
 });
@@ -342,18 +263,18 @@ router.post(
       if (userId) {
         const user = users.get(userId);
         const priceUsd = data.price_amount ?? 0;
-        const robuxAmount = Math.floor(priceUsd / 0.0035);
+        const tokenAmount = Math.floor(priceUsd * TOKENS_PER_USD);
         if (user) {
-          user.balance += robuxAmount;
+          user.balance += tokenAmount;
           addActivity({
             action: "deposit_confirmed",
             adminId: "system",
             adminName: "NowPayments",
             targetId: userId,
             targetName: user.username,
-            details: `Deposit confirmed: $${priceUsd} USD → R$ ${robuxAmount} (${data.pay_currency?.toUpperCase()})`,
+            details: `Deposit confirmed: $${priceUsd} USD → 🪙 ${tokenAmount} tokens (${data.pay_currency?.toUpperCase()})`,
           });
-          logger.info({ userId, robuxAmount }, "Balance credited");
+          logger.info({ userId, tokenAmount }, "Balance credited");
         }
       }
     }
