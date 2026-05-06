@@ -35,32 +35,6 @@ const SIDE_COLOR: Record<Side, { bg: string; border: string; text: string; label
 
 const QUICK = [500, 1000, 2500, 5000, 10000];
 
-const DEMO_GAMES: CFGame[] = [
-  {
-    id: "g1",
-    creator: { name: "ShadowKing", avatar: `https://api.dicebear.com/9.x/pixel-art/svg?seed=shadow`, id: "u1" },
-    creatorSide: "heads",
-    bet: 2500,
-    status: "waiting",
-  },
-  {
-    id: "g2",
-    creator: { name: "NitroX99", avatar: `https://api.dicebear.com/9.x/pixel-art/svg?seed=nitro`, id: "u2" },
-    creatorSide: "tails",
-    bet: 10000,
-    status: "waiting",
-  },
-  {
-    id: "g3",
-    creator: { name: "Viperr", avatar: `https://api.dicebear.com/9.x/pixel-art/svg?seed=viper`, id: "u3" },
-    joiner: { name: "Crypt0", avatar: `https://api.dicebear.com/9.x/pixel-art/svg?seed=crypt`, id: "u4" },
-    creatorSide: "tails",
-    bet: 5000,
-    status: "done",
-    winner: "tails",
-  },
-];
-
 /* ─── Coin component ────────────────────────────────────────────── */
 function Coin({ spinning, result, size = 120 }: { spinning: boolean; result: Side | null; size?: number }) {
   const targetY = spinning ? 1800 : result === "tails" ? 180 : 0;
@@ -460,13 +434,13 @@ function FairnessPanel({ info, onChangeClientSeed }: { info: FairnessInfo | null
 export default function CoinflipGame() {
   const { user } = useAuth();
   const [tab, setTab] = useState<"open" | "history">("open");
-  const [games, setGames] = useState<CFGame[]>(DEMO_GAMES);
+  const [games, setGames] = useState<CFGame[]>([]);
   const [showCreate, setShowCreate] = useState(false);
   const [betAmount, setBetAmount] = useState("");
   const [side, setSide] = useState<Side>("heads");
   const [activeFlip, setActiveFlip] = useState<{ game: CFGame; mySide: Side } | null>(null);
   const [fairness, setFairness] = useState<FairnessInfo | null>(null);
-  const [history, setHistory] = useState<CFGame[]>(DEMO_GAMES.filter((g) => g.status === "done"));
+  const [history, setHistory] = useState<CFGame[]>([]);
 
   useEffect(() => {
     fetch("/api/fairness/init", { credentials: "include" })

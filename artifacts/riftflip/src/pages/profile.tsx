@@ -1,8 +1,13 @@
 import { Link } from "wouter";
 import { useAuth, avatarUrl } from "@/contexts/AuthContext";
-import { LogOut, Wallet, Trophy, Gamepad2, Calendar, Copy, CheckCircle, ChevronRight, Shield, Settings, Crown } from "lucide-react";
+import {
+  LogOut, Wallet, Trophy, Gamepad2, Calendar, Copy, CheckCircle,
+  ChevronRight, Shield, Crown, ArrowUpRight,
+} from "lucide-react";
 import { useState } from "react";
 import { motion } from "framer-motion";
+
+const ROBUX_TO_USD = 0.0035;
 
 const DiscordIcon = () => (
   <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
@@ -16,7 +21,9 @@ function SignedInProfile() {
 
   if (!user) return null;
 
-  const joinedAt = new Date(user.joinedAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+  const joinedAt = new Date(user.joinedAt).toLocaleDateString("en-GB", {
+    day: "numeric", month: "long", year: "numeric",
+  });
 
   const copyId = () => {
     navigator.clipboard.writeText(user.id).catch(() => {});
@@ -29,121 +36,152 @@ function SignedInProfile() {
     refetch();
   };
 
-  return (
-    <div className="min-h-screen" style={{ background: "#111" }}>
+  const balance = user.balance;
+  const usdBalance = (balance * ROBUX_TO_USD).toFixed(2);
 
-      {/* Banner */}
-      <div className="relative h-32" style={{ background: "linear-gradient(135deg, #1a0a3a 0%, #0d1a3a 40%, #0a1a2a 70%, #111 100%)" }}>
-        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at 30% 50%, rgba(124,58,237,0.3) 0%, transparent 60%)" }} />
-        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at 80% 50%, rgba(88,101,242,0.2) 0%, transparent 60%)" }} />
-        <Link href="/"><button className="absolute top-4 left-4 w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)" }}>
-          <ChevronRight size={16} className="text-white rotate-180" />
-        </button></Link>
+  return (
+    <div className="min-h-screen pb-24" style={{ background: "#111" }}>
+
+      {/* Top bar */}
+      <div className="flex items-center justify-between px-4 py-4" style={{ borderBottom: "1px solid #1a1a1a" }}>
+        <h1 className="text-white font-black text-xl">Profile</h1>
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors hover:bg-[#2a1010]"
+          style={{ background: "#1a1010", border: "1px solid #2a1010", color: "#ef4444" }}
+        >
+          <LogOut size={12} />
+          Sign out
+        </button>
       </div>
 
-      {/* Avatar overlapping banner */}
-      <div className="px-4" style={{ marginTop: -48 }}>
-        <div className="flex items-end justify-between mb-4">
-          <div className="relative">
-            {/* Outer glow ring */}
-            <div style={{ position: "absolute", inset: -4, borderRadius: "50%", background: "conic-gradient(from 0deg, #5865F2, #7c3aed, #a855f7, #5865F2)", padding: 3, borderRadius: 999 }}>
-              <div style={{ width: "100%", height: "100%", borderRadius: "50%", background: "#111" }} />
-            </div>
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: "spring", damping: 15 }}
-              style={{ position: "relative" }}
-            >
-              <img
-                src={avatarUrl(user)}
-                alt={user.username}
-                className="w-24 h-24 rounded-full object-cover"
-                style={{ border: "4px solid #111", position: "relative", zIndex: 1 }}
-              />
-              {/* Discord badge */}
-              <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full flex items-center justify-center" style={{ background: "#5865F2", border: "3px solid #111", zIndex: 2 }}>
-                <DiscordIcon />
-              </div>
-            </motion.div>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors hover:bg-[#2a1010]"
-            style={{ background: "#1a1010", border: "1px solid #2a1010", color: "#ef4444" }}
-          >
-            <LogOut size={12} />
-            Sign out
-          </button>
-        </div>
+      <div className="px-4 pt-4">
 
-        {/* Name + ID */}
-        <div className="mb-4">
-          <div className="flex items-center gap-2 mb-0.5">
-            <h1 className="text-white font-black text-2xl">{user.username}</h1>
-            <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold" style={{ background: "#5865F233", border: "1px solid #5865F255", color: "#7c8df0" }}>
-              <DiscordIcon />
-              Discord
-            </div>
-          </div>
-          <button onClick={copyId} className="flex items-center gap-1.5 text-slate-600 text-xs hover:text-slate-400 transition-colors">
-            <span className="font-mono">{user.id}</span>
-            {copied ? <CheckCircle size={11} className="text-green-500" /> : <Copy size={11} />}
-          </button>
-          <div className="flex items-center gap-1.5 mt-1.5">
-            <Calendar size={11} className="text-slate-700" />
-            <span className="text-slate-700 text-xs">Member since {joinedAt}</span>
-          </div>
-        </div>
-
-        {/* Balance highlight card */}
+        {/* Avatar + user info card */}
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-4 p-5 rounded-2xl relative overflow-hidden"
-          style={{ background: "linear-gradient(135deg, #1a0a3a, #1a1a2a)", border: "1px solid #3a1a6a" }}
+          className="p-5 rounded-2xl mb-4 relative overflow-hidden"
+          style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}
         >
-          <div style={{ position: "absolute", top: -20, right: -20, width: 100, height: 100, borderRadius: "50%", background: "rgba(124,58,237,0.15)", filter: "blur(20px)" }} />
-          <p className="text-slate-500 text-xs mb-1">Available Balance</p>
-          <p className="text-4xl font-black text-white mb-3">
-            R$ <span style={{ color: "#c4b5fd" }}>{user.balance.toLocaleString()}</span>
-          </p>
-          <Link href="/wallet">
-            <button className="flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-bold hover:opacity-90" style={{ background: "#7c3aed" }}>
-              <Wallet size={14} />
-              Manage Wallet
-            </button>
-          </Link>
+          {/* Subtle glow */}
+          <div style={{ position: "absolute", top: -30, right: -20, width: 140, height: 140, borderRadius: "50%", background: "rgba(88,101,242,0.12)", filter: "blur(40px)", pointerEvents: "none" }} />
+
+          <div className="flex items-center gap-4">
+            {/* Avatar with Discord badge */}
+            <div className="relative flex-shrink-0">
+              <img
+                src={avatarUrl(user)}
+                alt={user.username}
+                className="w-20 h-20 rounded-2xl object-cover"
+                style={{ border: "3px solid #2a2a2a" }}
+              />
+              <div className="absolute -bottom-1.5 -right-1.5 w-7 h-7 rounded-full flex items-center justify-center" style={{ background: "#5865F2", border: "3px solid #1a1a1a" }}>
+                <DiscordIcon />
+              </div>
+            </div>
+
+            {/* Info */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                <h2 className="text-white font-black text-xl leading-none">{user.username}</h2>
+                {user.isAdmin && (
+                  <span className="px-2 py-0.5 rounded-full text-xs font-bold flex-shrink-0" style={{ background: "#2a0a0a", border: "1px solid #5a1a1a", color: "#f87171" }}>Admin</span>
+                )}
+              </div>
+              <button onClick={copyId} className="flex items-center gap-1.5 text-slate-600 text-xs hover:text-slate-400 transition-colors mb-1.5">
+                <span className="font-mono truncate max-w-32">{user.id}</span>
+                {copied ? <CheckCircle size={10} className="text-green-500 flex-shrink-0" /> : <Copy size={10} className="flex-shrink-0" />}
+              </button>
+              <div className="flex items-center gap-1.5">
+                <Calendar size={10} className="text-slate-700 flex-shrink-0" />
+                <span className="text-slate-700 text-xs">Since {joinedAt}</span>
+              </div>
+            </div>
+          </div>
         </motion.div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-2 mb-4">
+        {/* Balance card */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="p-5 rounded-2xl mb-4 relative overflow-hidden"
+          style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}
+        >
+          <div style={{ position: "absolute", top: -30, right: -20, width: 120, height: 120, borderRadius: "50%", background: "rgba(124,58,237,0.12)", filter: "blur(30px)", pointerEvents: "none" }} />
+          <div className="flex items-start justify-between mb-2">
+            <p className="text-slate-500 text-sm">Available Balance</p>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "#2a1f44", border: "1px solid #3a2a64" }}>
+              <Wallet size={16} className="text-violet-400" />
+            </div>
+          </div>
+          <p className="text-4xl font-black text-white leading-none mb-1">
+            {balance.toLocaleString()}
+            <span className="text-lg text-slate-500 font-semibold ml-2">tokens</span>
+          </p>
+          <p className="text-slate-600 text-sm mb-5">≈ ${usdBalance} USD</p>
+          <div className="flex gap-3">
+            <Link href="/wallet" className="flex-1">
+              <button className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-sm transition-all hover:opacity-80"
+                style={{ background: "#222", border: "1px solid #333", color: "#ccc" }}>
+                <Wallet size={14} /> Wallet
+              </button>
+            </Link>
+            <Link href="/wallet" className="flex-1">
+              <button className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-sm transition-all hover:opacity-90"
+                style={{ background: "#7c3aed", color: "#fff" }}>
+                <ArrowUpRight size={14} /> Withdraw
+              </button>
+            </Link>
+          </div>
+        </motion.div>
+
+        {/* Stats row */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="grid grid-cols-3 gap-3 mb-4"
+        >
           {[
-            { label: "Won", value: "R$ 0", icon: Trophy, color: "#f59e0b" },
-            { label: "Games", value: "0", icon: Gamepad2, color: "#a78bfa" },
-            { label: "Level", value: "1", icon: Crown, color: "#fb923c" },
+            { label: "Won", value: "0", icon: Trophy, color: "#f59e0b", bg: "#1a1300" },
+            { label: "Games", value: "0", icon: Gamepad2, color: "#a78bfa", bg: "#1a0a2a" },
+            { label: "Level", value: "1", icon: Crown, color: "#fb923c", bg: "#1a0e00" },
           ].map((s) => (
-            <div key={s.label} className="p-3 rounded-xl text-center" style={{ background: "#1a1a1a", border: "1px solid #222" }}>
-              <s.icon size={14} style={{ color: s.color }} className="mx-auto mb-1.5" />
-              <p className="text-white font-black text-base leading-none">{s.value}</p>
+            <div key={s.label} className="p-4 rounded-2xl text-center" style={{ background: "#1a1a1a", border: "1px solid #222" }}>
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center mx-auto mb-2" style={{ background: s.bg }}>
+                <s.icon size={14} style={{ color: s.color }} />
+              </div>
+              <p className="text-white font-black text-xl leading-none">{s.value}</p>
               <p className="text-slate-600 text-xs mt-0.5">{s.label}</p>
             </div>
           ))}
-        </div>
+        </motion.div>
 
-        {/* Quick links */}
-        <div className="rounded-xl overflow-hidden mb-4" style={{ border: "1px solid #222" }}>
+        {/* Links */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="rounded-2xl overflow-hidden mb-4"
+          style={{ border: "1px solid #222" }}
+        >
           {[
-            { label: "Wallet", desc: "Deposit & withdraw", icon: Wallet, href: "/wallet", color: "#7c3aed" },
-            { label: "Rewards", desc: "Daily login & VIP perks", icon: Trophy, href: "/rewards", color: "#f59e0b" },
-            { label: "Games", desc: "Coinflip · Jackpot · Minefield", icon: Gamepad2, href: "/games", color: "#a78bfa" },
-            { label: "Admin Panel", desc: "Manage users & settings", icon: Shield, href: "/admin", color: "#ef4444" },
+            { label: "Wallet", desc: "Deposit & withdraw", icon: Wallet, href: "/wallet", color: "#7c3aed", bg: "#1a0a2a" },
+            { label: "Rewards", desc: "Daily login & VIP perks", icon: Trophy, href: "/rewards", color: "#f59e0b", bg: "#1a1300" },
+            { label: "Games", desc: "Coinflip · Jackpot · Minefield", icon: Gamepad2, href: "/games", color: "#a78bfa", bg: "#1a0a2a" },
+            ...(user.isAdmin
+              ? [{ label: "Admin Panel", desc: "Manage users & settings", icon: Shield, href: "/admin", color: "#ef4444", bg: "#1a0a0a" }]
+              : []),
           ].map((item, i, arr) => (
             <Link key={item.href} href={item.href}>
-              <div className="flex items-center gap-3 px-4 py-3.5 cursor-pointer transition-colors hover:bg-[#1e1e1e]"
-                style={{ background: "#1a1a1a", borderBottom: i < arr.length - 1 ? "1px solid #1e1e1e" : "none" }}>
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: item.color + "22" }}>
-                  <item.icon size={14} style={{ color: item.color }} />
+              <div
+                className="flex items-center gap-3 px-4 py-4 cursor-pointer transition-colors hover:bg-[#1e1e1e]"
+                style={{ background: "#1a1a1a", borderBottom: i < arr.length - 1 ? "1px solid #1e1e1e" : "none" }}
+              >
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: item.bg }}>
+                  <item.icon size={15} style={{ color: item.color }} />
                 </div>
                 <div className="flex-1">
                   <p className="text-white font-semibold text-sm">{item.label}</p>
@@ -153,17 +191,19 @@ function SignedInProfile() {
               </div>
             </Link>
           ))}
-        </div>
+        </motion.div>
 
-        {/* Security badge */}
-        <div className="mb-10 p-4 rounded-xl flex items-center gap-3" style={{ background: "#0a1a0a", border: "1px solid #1a3a1a" }}>
-          <Shield size={14} className="text-green-600 flex-shrink-0" />
+        {/* Discord verified badge */}
+        <div className="p-4 rounded-2xl flex items-center gap-3" style={{ background: "#0a0f1a", border: "1px solid #1a2a4a" }}>
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "#5865F222" }}>
+            <DiscordIcon />
+          </div>
           <div className="flex-1">
-            <p className="text-green-500 text-sm font-semibold">Verified via Discord OAuth2</p>
+            <p className="text-blue-400 text-sm font-semibold">Verified via Discord OAuth2</p>
             <p className="text-slate-700 text-xs">Your account is protected</p>
           </div>
-          <Settings size={13} className="text-slate-700" />
         </div>
+
       </div>
     </div>
   );
@@ -181,13 +221,13 @@ export default function Profile() {
   if (!isSignedIn) return (
     <div className="flex min-h-screen items-center justify-center px-4" style={{ background: "#111" }}>
       <div className="text-center">
-        <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: "linear-gradient(135deg, #1a0a3a, #0a1a3a)", border: "2px solid #3a1a6a" }}>
+        <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}>
           <DiscordIcon />
         </div>
         <h2 className="text-xl font-black text-white mb-2">Your Riftflip Profile</h2>
         <p className="text-slate-500 text-sm mb-6">Sign in with Discord to view your account</p>
         <Link href="/sign-in">
-          <button className="px-8 py-3 rounded-lg text-white font-bold hover:opacity-90" style={{ background: "#5865F2" }}>
+          <button className="px-8 py-3 rounded-xl text-white font-bold hover:opacity-90" style={{ background: "#5865F2" }}>
             <span className="flex items-center gap-2"><DiscordIcon /> Continue with Discord</span>
           </button>
         </Link>

@@ -88,9 +88,10 @@ config.json, balances.json, casino_stats.json, levels.json, warnings.json, banne
 
 ## Payments
 
-- **MowPayments (Robux)**: `POST /api/payments/mow/create` — creates a pending order; admin confirms via admin panel. Set `MOWPAYMENTS_API_KEY` secret for live API mode (fallback: manual admin confirmation).
-- **NowPayments (Crypto)**: `POST /api/payments/create` — requires `NOWPAYMENTS_API_KEY` secret.
+- **Deposit**: `POST /api/payments/create` via NowPayments — BTC, ETH, LTC, USDT, SOL, BNB. Requires `NOWPAYMENTS_API_KEY` secret.
+- **Withdraw**: `POST /api/payments/withdraw` via NowPayments payout API. Falls back to manual queue if API key absent; balance is deducted immediately.
 - **IPN webhook**: `POST /api/payments/ipn` — auto-credits user balance on confirmed crypto payments.
+- **Admin MowPayments confirm** (legacy): `POST /api/admin/payments/mow/confirm` — still exists for manual Robux top-ups.
 
 ## Key Commands
 

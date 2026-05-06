@@ -213,6 +213,97 @@ router.get("/payments/mow/check/:orderId", async (req, res) => {
   res.json({ orderId, status: log.status, robuxAmount: log.priceAmount });
 });
 
+/* ── NowPayments Payout (Withdraw) ── */
+
+router.post("/payments/withdraw", async (req, res) => {
+  if (!req.isAuthenticated?.() || !req.user) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+  const { robuxAmount, withdrawAddress, currency } = req.body as {
+    robuxAmount?: number;
+    withdrawAddress?: string;
+    currency?: string;
+  };
+  if (!robuxAmount || robuxAmount <= 0 || !withdrawAddress || !currency) {
+    res.status(400).json({ error: "robuxAmount, withdrawAddress, and currency are required" });
+    return;
+  }
+  const user = users.get(req.user.id);
+  if (!user || user.balance < robuxAmount) {
+    res.status(400).json({ error: "Insufficient balance" });
+    return;
+  }
+
+  const usdAmount = Math.round(robuxAmount * 0.0035 * 100) / 100;
+
+  if (NOWPAYMENTS_API_KEY) {
+    try {
+      const r = await fetch(`${NOWPAYMENTS_BASE}/payout`, {
+        method: "POST",
+        headers: nowHeaders(),
+        body: JSON.stringify({
+          withdrawals: [{
+            address: withdrawAddress,
+            currency: currency.toLowerCase(),
+            amount: usdAmount,
+            ipn_callback_url: "",
+          }],
+        }),
+      });
+      const data = await r.json() as { id?: string; error?: string };
+      if (!data.error) {
+        user.balance -= robuxAmount;
+        paymentLogs.unshift({
+          id: data.id ?? `withdraw-${Date.now()}`,
+          userId: req.user.id,
+          username: req.user.username,
+          priceAmount: robuxAmount,
+          payCurrency: currency,
+          payAmount: usdAmount,
+          status: "processing",
+          createdAt: new Date().toISOString(),
+        });
+        addActivity({
+          action: "withdrawal_created",
+          adminId: "system",
+          adminName: "NowPayments",
+          targetId: req.user.id,
+          targetName: req.user.username,
+          details: `Withdrawal: R$ ${robuxAmount} tokens → $${usdAmount} USD in ${currency.toUpperCase()} to ${withdrawAddress.slice(0, 10)}…`,
+        });
+        res.json({ ok: true, id: data.id });
+        return;
+      }
+    } catch (err) {
+      logger.error({ err }, "NowPayments payout error");
+    }
+  }
+
+  // Fallback: manual withdrawal request
+  user.balance -= robuxAmount;
+  const wdId = `wd-${req.user.id}-${Date.now()}`;
+  paymentLogs.unshift({
+    id: wdId,
+    userId: req.user.id,
+    username: req.user.username,
+    priceAmount: robuxAmount,
+    payCurrency: currency,
+    payAmount: usdAmount,
+    status: "pending_manual",
+    createdAt: new Date().toISOString(),
+  });
+  addActivity({
+    action: "withdrawal_requested",
+    adminId: "system",
+    adminName: "System",
+    targetId: req.user.id,
+    targetName: req.user.username,
+    details: `Manual withdrawal request: R$ ${robuxAmount} tokens → ${currency.toUpperCase()} to ${withdrawAddress.slice(0, 10)}…`,
+  });
+  res.json({ ok: true, id: wdId, manual: true });
+});
+
 /* ── NowPayments IPN ── */
 
 router.post(
