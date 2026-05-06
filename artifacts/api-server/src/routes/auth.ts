@@ -14,12 +14,27 @@ function requireDiscordConfigured(_req: Request, res: Response, next: NextFuncti
   next();
 }
 
-router.get("/auth/discord", requireDiscordConfigured, passport.authenticate("discord"));
+function getDynamicCallbackURL(req: Request): string {
+  const forwarded = req.headers["x-forwarded-host"] as string | undefined;
+  const host = (forwarded?.split(",")[0]?.trim()) ?? req.headers["host"] ?? "localhost";
+  return `https://${host}/api/auth/discord/callback`;
+}
+
+router.get("/auth/discord", requireDiscordConfigured, (req, res, next) => {
+  const callbackURL = getDynamicCallbackURL(req);
+  (passport.authenticate("discord", { callbackURL }) as (req: Request, res: Response, next: NextFunction) => void)(req, res, next);
+});
 
 router.get(
   "/auth/discord/callback",
   requireDiscordConfigured,
-  passport.authenticate("discord", { failureRedirect: "/sign-in?error=auth_failed" }),
+  (req, res, next) => {
+    const callbackURL = getDynamicCallbackURL(req);
+    (passport.authenticate("discord", {
+      failureRedirect: "/sign-in?error=auth_failed",
+      callbackURL,
+    }) as (req: Request, res: Response, next: NextFunction) => void)(req, res, next);
+  },
   (req, res) => {
     if (req.user) {
       const ip = (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim() ?? req.ip ?? "unknown";

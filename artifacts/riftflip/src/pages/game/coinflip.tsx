@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Plus, History, Users } from "lucide-react";
 import { useAuth, avatarUrl } from "@/contexts/AuthContext";
@@ -333,6 +333,7 @@ function FlipModal({
 /* ─── Main page ─────────────────────────────────────────────────── */
 export default function CoinflipGame() {
   const { user } = useAuth();
+  const [, navigate] = useLocation();
   const [tab, setTab] = useState<"open" | "history">("open");
   const [games, setGames] = useState<CFGame[]>([]);
   const [showCreate, setShowCreate] = useState(false);
@@ -340,28 +341,45 @@ export default function CoinflipGame() {
   const [side, setSide] = useState<Side>("heads");
   const [activeFlip, setActiveFlip] = useState<{ game: CFGame; mySide: Side } | null>(null);
   const [history, setHistory] = useState<CFGame[]>([]);
+  const [createError, setCreateError] = useState("");
+  const [joinError, setJoinError] = useState<string | null>(null);
+
+  const openCreateSheet = () => {
+    if (!user) { navigate("/sign-in"); return; }
+    setCreateError("");
+    setShowCreate(true);
+  };
 
   const createGame = () => {
     if (!betAmount || !user) return;
+    const bet = Number(betAmount);
+    if (bet <= 0) { setCreateError("Bet must be greater than 0."); return; }
+    if (bet > user.balance) { setCreateError(`Insufficient balance. You have ${user.balance.toLocaleString()} tokens.`); return; }
     const newGame: CFGame = {
       id: `g${Date.now()}`,
       creator: { name: user.username, avatar: avatarUrl(user), id: user.id },
       creatorSide: side,
-      bet: Number(betAmount),
+      bet,
       status: "waiting",
     };
     setGames((g) => [newGame, ...g]);
     setBetAmount("");
+    setCreateError("");
     setShowCreate(false);
   };
 
   const joinGame = (game: CFGame) => {
+    if (!user) { navigate("/sign-in"); return; }
+    if (game.bet > user.balance) {
+      setJoinError(`Insufficient balance to join. Need ${game.bet.toLocaleString()} tokens, you have ${user.balance.toLocaleString()}.`);
+      setTimeout(() => setJoinError(null), 3000);
+      return;
+    }
+    setJoinError(null);
     const mySide: Side = game.creatorSide === "heads" ? "tails" : "heads";
     setGames((gs) => gs.map((g) => g.id === game.id
-      ? {
-        ...g, status: "flipping",
-        joiner: user ? { name: user.username, avatar: avatarUrl(user), id: user.id } : { name: "You", avatar: `https://api.dicebear.com/9.x/pixel-art/svg?seed=you`, id: "you" },
-      } : g));
+      ? { ...g, status: "flipping", joiner: { name: user.username, avatar: avatarUrl(user), id: user.id } }
+      : g));
     setActiveFlip({ game, mySide });
   };
 
@@ -391,7 +409,7 @@ export default function CoinflipGame() {
           </div>
         </div>
         <button
-          onClick={() => setShowCreate(true)}
+          onClick={openCreateSheet}
           className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-white text-sm font-bold hover:opacity-90"
           style={{ background: "#7c3aed" }}
         >
@@ -429,8 +447,8 @@ export default function CoinflipGame() {
                   <Coin spinning={false} result="heads" size={80} />
                   <p className="text-white font-bold mt-5 mb-1">No open games</p>
                   <p className="text-slate-500 text-sm mb-5">Be the first to create one</p>
-                  <button onClick={() => setShowCreate(true)} className="px-6 py-2.5 rounded-lg text-white font-bold text-sm hover:opacity-90" style={{ background: "#7c3aed" }}>
-                    Create Game
+                  <button onClick={openCreateSheet} className="px-6 py-2.5 rounded-lg text-white font-bold text-sm hover:opacity-90" style={{ background: "#7c3aed" }}>
+                    {user ? "Create Game" : "Sign in to Play"}
                   </button>
                 </div>
               ) : (
@@ -463,6 +481,19 @@ export default function CoinflipGame() {
         </AnimatePresence>
       </div>
 
+      {/* Join error toast */}
+      <AnimatePresence>
+        {joinError && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}
+            className="fixed bottom-24 left-4 right-4 z-50 p-3 rounded-xl text-center text-sm font-semibold"
+            style={{ background: "#2a0a0a", border: "1px solid #5a1a1a", color: "#f87171" }}
+          >
+            {joinError}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Flip modal */}
       <AnimatePresence>
         {activeFlip && (
@@ -491,7 +522,10 @@ export default function CoinflipGame() {
               style={{ background: "#1a1a1a", borderTop: "1px solid #2a2a2a" }}
             >
               <div className="w-10 h-1 rounded-full bg-[#333] mx-auto mb-5" />
-              <h2 className="text-white font-black text-xl mb-5">Create Coinflip</h2>
+              <h2 className="text-white font-black text-xl mb-1">Create Coinflip</h2>
+              {user && (
+                <p className="text-slate-500 text-xs mb-4">Balance: <span className="text-white font-semibold">{user.balance.toLocaleString()} tokens</span></p>
+              )}
 
               {/* Side picker */}
               <p className="text-slate-400 text-sm mb-2">Choose your side</p>
@@ -552,6 +586,9 @@ export default function CoinflipGame() {
                 </p>
               )}
 
+              {createError && (
+                <p className="text-red-400 text-sm text-center mb-3">{createError}</p>
+              )}
               <button
                 onClick={createGame}
                 disabled={!betAmount || !user}

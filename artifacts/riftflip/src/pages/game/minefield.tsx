@@ -32,8 +32,14 @@ export default function MinefieldGame() {
   const multiplier = getMultiplier(safeCount, mineCount);
   const profit = Math.round(Number(betAmount || 0) * multiplier);
 
+  const [betError, setBetError] = useState("");
+
   const startGame = () => {
-    if (!betAmount) return;
+    if (!betAmount || !user) return;
+    const bet = Number(betAmount);
+    if (bet <= 0) { setBetError("Bet must be greater than 0."); return; }
+    if (bet > user.balance) { setBetError(`Insufficient balance. You have ${user.balance.toLocaleString()} tokens.`); return; }
+    setBetError("");
     const positions = new Set<number>();
     while (positions.size < mineCount) positions.add(Math.floor(Math.random() * GRID_SIZE));
     setMines(positions);
@@ -255,6 +261,12 @@ export default function MinefieldGame() {
                 </p>
               )}
 
+              {user && (
+                <p className="text-slate-500 text-xs mb-3">Balance: <span className="text-white font-semibold">{user.balance.toLocaleString()} tokens</span></p>
+              )}
+              {betError && (
+                <p className="text-red-400 text-sm text-center mb-3">{betError}</p>
+              )}
               <button onClick={startGame} disabled={!betAmount || !user}
                 className="w-full py-3.5 rounded-lg text-white font-black text-base hover:opacity-90"
                 style={{ background: betAmount && user ? "#7c3aed" : "#1e1e1e", color: betAmount && user ? "#fff" : "#444" }}>

@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Plus, History } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 type Tab = "current" | "history";
 
@@ -76,12 +77,21 @@ function JackpotWheel({ tokens }: { tokens: number }) {
 }
 
 export default function JackpotGame() {
+  const { user } = useAuth();
+  const [, navigate] = useLocation();
   const [tab, setTab] = useState<Tab>("current");
   const [tokens, setTokens] = useState(0);
   const [showDeposit, setShowDeposit] = useState(false);
   const [depositAmount, setDepositAmount] = useState("");
+  const [depositError, setDepositError] = useState("");
   const [round] = useState(1);
   const [players] = useState(0);
+
+  const openDeposit = () => {
+    if (!user) { navigate("/sign-in"); return; }
+    setDepositError("");
+    setShowDeposit(true);
+  };
 
   return (
     <div className="min-h-screen" style={{ background: "#111" }} data-testid="jackpot-page">
@@ -106,13 +116,13 @@ export default function JackpotGame() {
           </div>
         </div>
         <button
-          onClick={() => setShowDeposit(true)}
+          onClick={openDeposit}
           className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-white text-sm font-bold transition-all hover:opacity-90"
           style={{ background: "#7c3aed" }}
           data-testid="deposit-btn"
         >
           <Plus size={15} />
-          Deposit
+          {user ? "Deposit" : "Sign In"}
         </button>
       </div>
 
@@ -159,7 +169,7 @@ export default function JackpotGame() {
                   Waiting for players ({players}/2 minimum)
                 </p>
                 <button
-                  onClick={() => setShowDeposit(true)}
+                  onClick={openDeposit}
                   className="flex items-center gap-2 px-6 py-3 rounded-lg text-white font-bold text-sm transition-all hover:opacity-90 w-full justify-center"
                   style={{ background: "#7c3aed" }}
                   data-testid="deposit-tokens-btn"
@@ -206,7 +216,10 @@ export default function JackpotGame() {
               data-testid="deposit-sheet"
             >
               <div className="w-10 h-1 rounded-full bg-[#333] mx-auto mb-5" />
-              <h2 className="text-white font-black text-xl mb-2">Deposit Tokens</h2>
+              <h2 className="text-white font-black text-xl mb-1">Deposit Tokens</h2>
+              {user && (
+                <p className="text-slate-500 text-xs mb-1">Balance: <span className="text-white font-semibold">{user.balance.toLocaleString()} tokens</span></p>
+              )}
               <p className="text-slate-500 text-sm mb-5">Enter the jackpot pool. The more you deposit, the better your odds.</p>
 
               <p className="text-slate-400 text-sm mb-2">Amount (tokens)</p>
@@ -241,13 +254,19 @@ export default function JackpotGame() {
                 ))}
               </div>
 
+              {depositError && (
+                <p className="text-red-400 text-sm text-center mb-3">{depositError}</p>
+              )}
               <button
                 onClick={() => {
-                  if (depositAmount) {
-                    setTokens((t) => t + Number(depositAmount));
-                    setDepositAmount("");
-                    setShowDeposit(false);
-                  }
+                  if (!depositAmount || !user) return;
+                  const amt = Number(depositAmount);
+                  if (amt <= 0) { setDepositError("Amount must be greater than 0."); return; }
+                  if (amt > user.balance) { setDepositError(`Insufficient balance. You have ${user.balance.toLocaleString()} tokens.`); return; }
+                  setDepositError("");
+                  setTokens((t) => t + amt);
+                  setDepositAmount("");
+                  setShowDeposit(false);
                 }}
                 className="w-full py-3.5 rounded-lg text-white font-black text-base transition-all hover:opacity-90"
                 style={{

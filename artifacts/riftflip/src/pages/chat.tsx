@@ -205,7 +205,7 @@ export default function Chat() {
   }, [pollEvents]);
 
   const sendMessage = () => {
-    if (!input.trim()) return;
+    if (!input.trim() || !isSignedIn) return;
     const now = new Date();
     const time = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
     const displayName = isSignedIn && user ? user.username : "You";
