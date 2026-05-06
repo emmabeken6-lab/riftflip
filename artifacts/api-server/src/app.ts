@@ -16,8 +16,9 @@ const DISCORD_CLIENT_ID = process.env["DISCORD_CLIENT_ID"] ?? "";
 const DISCORD_CLIENT_SECRET = process.env["DISCORD_CLIENT_SECRET"] ?? "";
 const SESSION_SECRET = process.env["SESSION_SECRET"] ?? "riftflip-session-secret-change-me";
 
-const domains = (process.env["REPLIT_DOMAINS"] ?? "").split(",");
-const primaryDomain = domains[0]?.trim();
+const domains = (process.env["REPLIT_DOMAINS"] ?? "").split(",").map((d) => d.trim()).filter(Boolean);
+const devDomain = process.env["REPLIT_DEV_DOMAIN"]?.trim();
+const primaryDomain = devDomain ?? domains[0];
 const port = process.env["PORT"] ?? "3001";
 
 const callbackURL = primaryDomain

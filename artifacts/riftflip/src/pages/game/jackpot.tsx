@@ -210,9 +210,9 @@ export default function JackpotGame() {
               <h2 className="text-white font-black text-xl mb-2">Deposit Tokens</h2>
               <p className="text-slate-500 text-sm mb-5">Enter the jackpot pool. The more you deposit, the better your odds.</p>
 
-              <p className="text-slate-400 text-sm mb-2">Amount (R$)</p>
+              <p className="text-slate-400 text-sm mb-2">Amount (tokens)</p>
               <div className="flex items-center gap-3 px-4 py-3 rounded-lg mb-5" style={{ background: "#222", border: "1px solid #333" }}>
-                <span className="text-violet-400 font-bold text-lg">R$</span>
+                <span className="font-bold text-lg" style={{ color: "#6b7280" }}>T</span>
                 <input
                   type="number"
                   value={depositAmount}
@@ -237,7 +237,7 @@ export default function JackpotGame() {
                     }}
                     data-testid={`quick-${amt}`}
                   >
-                    R${amt >= 1000 ? `${amt / 1000}K` : amt}
+                    {amt >= 1000 ? `${amt / 1000}K` : amt}
                   </button>
                 ))}
               </div>

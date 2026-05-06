@@ -83,7 +83,9 @@ export default function TopNav() {
               style={{ background: "#1e1e1e", border: "1px solid #2a2a2a" }}
             >
               <Wallet size={13} className="text-slate-500" />
-              <span className="text-sm font-bold text-slate-300">R$ {user.balance.toLocaleString()}</span>
+              <span className="text-sm font-bold" style={{ color: "#9ca3af" }}>
+                <span style={{ color: "#6b7280", fontWeight: 700, fontSize: "0.85em" }}>T</span>{" "}{user.balance.toLocaleString()}
+              </span>
             </div>
 
             {/* User dropdown */}

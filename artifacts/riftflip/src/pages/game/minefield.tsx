@@ -208,9 +208,9 @@ export default function MinefieldGame() {
             {/* Stats */}
             <div className="grid grid-cols-3 gap-3 mb-4">
               {[
-                { label: "Bet", val: `R$ ${Number(betAmount).toLocaleString()}` },
+                { label: "Bet", val: `T ${Number(betAmount).toLocaleString()}` },
                 { label: "Multiplier", val: `${multiplier}x`, highlight: gameOver === "win" ? "#4ade80" : gameOver === "lose" ? "#f87171" : "#a78bfa" },
-                { label: "Profit", val: `R$ ${profit.toLocaleString()}`, highlight: gameOver === "win" ? "#4ade80" : undefined },
+                { label: "Profit", val: `T ${profit.toLocaleString()}`, highlight: gameOver === "win" ? "#4ade80" : undefined },
               ].map((s) => (
                 <div key={s.label} className="text-center">
                   <p className="text-slate-600 text-xs">{s.label}</p>
@@ -231,7 +231,7 @@ export default function MinefieldGame() {
                     color: gameOver === "win" ? "#22c55e" : "#f87171",
                   }}
                 >
-                  {gameOver === "win" ? `Cashed out at ${multiplier}x! +R$ ${profit.toLocaleString()}` : "💥 BOOM! Hit a mine!"}
+                  {gameOver === "win" ? `Cashed out at ${multiplier}x! +T ${profit.toLocaleString()} tokens` : "💥 BOOM! Hit a mine!"}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -284,7 +284,7 @@ export default function MinefieldGame() {
 
             {playing && (
               <button onClick={cashOut} className="w-full py-3 rounded-lg text-white font-bold text-sm hover:opacity-90" style={{ background: "#059669" }}>
-                Cash Out {multiplier}x · R$ {profit.toLocaleString()}
+                Cash Out {multiplier}x · T {profit.toLocaleString()} tokens
               </button>
             )}
           </div>
@@ -334,9 +334,9 @@ export default function MinefieldGame() {
               </div>
 
               {/* Bet amount */}
-              <p className="text-slate-400 text-sm mb-2">Bet amount (R$)</p>
+              <p className="text-slate-400 text-sm mb-2">Bet amount (tokens)</p>
               <div className="flex items-center gap-3 px-4 py-3 rounded-lg mb-3" style={{ background: "#222", border: "1px solid #333" }}>
-                <span className="text-violet-400 font-bold text-lg">R$</span>
+                <span className="font-bold text-lg" style={{ color: "#6b7280" }}>T</span>
                 <input type="number" value={betAmount} onChange={(e) => setBetAmount(e.target.value)} placeholder="0"
                   className="flex-1 bg-transparent text-white text-xl font-bold outline-none" />
               </div>
@@ -346,7 +346,7 @@ export default function MinefieldGame() {
                   <button key={amt} onClick={() => setBetAmount(String(amt))}
                     className="py-2 rounded-lg text-xs font-bold"
                     style={{ background: betAmount === String(amt) ? "#2a1f44" : "#222", border: betAmount === String(amt) ? "1px solid #7c3aed" : "1px solid #2a2a2a", color: betAmount === String(amt) ? "#c4b5fd" : "#555" }}>
-                    R${amt >= 1000 ? `${amt / 1000}K` : amt}
+                    {amt >= 1000 ? `${amt / 1000}K` : amt}
                   </button>
                 ))}
               </div>

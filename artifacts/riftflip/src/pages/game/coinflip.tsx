@@ -147,8 +147,8 @@ function GameCard({
         {/* Center */}
         <div className="flex-1 flex flex-col items-center gap-1.5">
           <Coin spinning={false} result={isDone ? (game.winner ?? null) : null} size={60} />
-          <p className="text-white font-black text-lg leading-none">
-            R$ {game.bet.toLocaleString()}
+          <p className="font-black text-lg leading-none" style={{ color: "#9ca3af" }}>
+            <span style={{ color: "#6b7280", fontSize: "0.75em", fontWeight: 700, letterSpacing: 1 }}>T</span>{" "}{game.bet.toLocaleString()}
           </p>
           <span className="text-slate-600 text-xs">
             {isDone ? (game.winner === game.creatorSide ? game.creator.name + " won" : (game.joiner?.name ?? "?") + " won") : "vs"}
@@ -251,7 +251,7 @@ function FlipModal({
         {/* Header */}
         <div className="px-5 pt-5 pb-3 text-center" style={{ borderBottom: "1px solid #222" }}>
           <p className="text-slate-400 text-sm">
-            R$ {(game.bet * 2).toLocaleString()} pot
+            <span style={{ color: "#6b7280", fontWeight: 700 }}>T</span>{" "}{(game.bet * 2).toLocaleString()} pot
           </p>
         </div>
 
@@ -310,7 +310,7 @@ function FlipModal({
                 </p>
                 {isWinner && (
                   <p className="text-green-400 font-bold text-lg">
-                    +R$ {(game.bet * 2).toLocaleString()}
+                    +<span style={{ color: "#4ade80", fontWeight: 700 }}>T</span>{" "}{(game.bet * 2).toLocaleString()} tokens
                   </p>
                 )}
                 <button
@@ -642,9 +642,9 @@ export default function CoinflipGame() {
               </div>
 
               {/* Bet amount */}
-              <p className="text-slate-400 text-sm mb-2">Bet amount (R$)</p>
+              <p className="text-slate-400 text-sm mb-2">Bet amount (tokens)</p>
               <div className="flex items-center gap-3 px-4 py-3 rounded-lg mb-3" style={{ background: "#222", border: "1px solid #333" }}>
-                <span className="text-violet-400 font-bold text-lg">R$</span>
+                <span className="font-bold text-lg" style={{ color: "#6b7280" }}>T</span>
                 <input
                   type="number"
                   value={betAmount}
@@ -673,7 +673,7 @@ export default function CoinflipGame() {
 
               {betAmount && (
                 <p className="text-slate-600 text-xs mb-4 text-center">
-                  Pot: R$ {(Number(betAmount) * 2).toLocaleString()} · 0% house fee
+                  Pot: T {(Number(betAmount) * 2).toLocaleString()} tokens · 0% house fee
                 </p>
               )}
 

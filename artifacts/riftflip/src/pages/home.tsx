@@ -47,10 +47,22 @@ export default function Home() {
           />
           <div className="absolute bottom-4 left-4 flex gap-2">
             <Link href="/games" data-testid="play-games-btn">
-              <button aria-label="Play Games" className="px-10 py-5 rounded-xl" style={{ background: "transparent", border: "none", cursor: "pointer" }} />
+              <button
+                aria-label="Play Games"
+                className="px-4 py-2 rounded-xl text-white text-sm font-bold hover:opacity-90 transition-opacity"
+                style={{ background: "rgba(124,58,237,0.85)", backdropFilter: "blur(4px)", border: "1px solid rgba(167,139,250,0.3)" }}
+              >
+                Play Games
+              </button>
             </Link>
             <Link href="/rewards" data-testid="rewards-btn">
-              <button aria-label="How it works" className="px-10 py-5 rounded-xl" style={{ background: "transparent", border: "none", cursor: "pointer" }} />
+              <button
+                aria-label="How it works"
+                className="px-4 py-2 rounded-xl text-white text-sm font-bold hover:opacity-90 transition-opacity"
+                style={{ background: "rgba(30,30,30,0.85)", backdropFilter: "blur(4px)", border: "1px solid rgba(255,255,255,0.1)" }}
+              >
+                How it works
+              </button>
             </Link>
           </div>
         </div>
