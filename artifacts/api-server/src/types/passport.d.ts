@@ -8,6 +8,7 @@ declare global {
       email?: string | null;
       balance: number;
       joinedAt: string;
+      isAdmin: boolean;
     }
   }
 }

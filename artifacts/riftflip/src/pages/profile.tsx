@@ -7,7 +7,7 @@ import {
 import { useState } from "react";
 import { motion } from "framer-motion";
 
-const ROBUX_TO_USD = 0.0035;
+const USD_PER_TOKEN = 0.05;
 
 const DiscordIcon = () => (
   <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
@@ -37,7 +37,7 @@ function SignedInProfile() {
   };
 
   const balance = user.balance;
-  const usdBalance = (balance * ROBUX_TO_USD).toFixed(2);
+  const usdBalance = (balance * USD_PER_TOKEN).toFixed(2);
 
   return (
     <div className="min-h-screen pb-24" style={{ background: "#111" }}>

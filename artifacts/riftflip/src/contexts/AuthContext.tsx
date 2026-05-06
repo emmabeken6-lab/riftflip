@@ -8,6 +8,7 @@ export interface DiscordUser {
   email?: string | null;
   balance: number;
   joinedAt: string;
+  isAdmin: boolean;
 }
 
 interface AuthState {

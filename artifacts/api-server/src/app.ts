@@ -54,6 +54,7 @@ if (DISCORD_CLIENT_ID && DISCORD_CLIENT_SECRET) {
           email: record.email,
           balance: record.balance,
           joinedAt: record.joinedAt,
+          isAdmin: record.isAdmin,
         };
         return done(null, user);
       },
@@ -100,8 +101,8 @@ app.use(
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: process.env["NODE_ENV"] === "production",
-      sameSite: process.env["NODE_ENV"] === "production" ? "none" : "lax",
+      secure: true,
+      sameSite: "none",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     },
   }),
