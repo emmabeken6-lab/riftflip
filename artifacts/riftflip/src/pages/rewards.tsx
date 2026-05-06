@@ -31,6 +31,11 @@ const TABS = [
 
 type Tab = typeof TABS[number]["id"];
 
+function formatTokens(n: number): string {
+  if (n >= 1000) return `${n / 1000}K tokens`;
+  return `${n} tokens`;
+}
+
 export default function Rewards() {
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("daily");
@@ -153,10 +158,10 @@ export default function Rewards() {
                       </p>
                     </div>
 
-                    {/* Rewards */}
+                    {/* Rewards — plain text, no emoji */}
                     <div className="text-right">
                       <p className="text-sm font-black" style={{ color: isToday ? "#a78bfa" : claimed ? "#4ade80" : "#555" }}>
-                        🪙 {reward.tokens >= 1000 ? `${reward.tokens / 1000}K` : reward.tokens}
+                        {formatTokens(reward.tokens)}
                       </p>
                       <p className="text-xs" style={{ color: isToday ? "#7c3aed" : "#333" }}>
                         +{reward.xp} XP
@@ -172,7 +177,9 @@ export default function Rewards() {
                 className="w-full py-3.5 rounded-xl text-white font-bold text-sm hover:opacity-90 transition-opacity"
                 style={{ background: streak < 7 ? "#7c3aed" : "#1e1e1e", color: streak < 7 ? "#fff" : "#444" }}
               >
-                {streak < 7 ? `Claim Day ${streak + 1} — 🪙 ${DAILY_REWARDS[streak]?.tokens.toLocaleString()}` : "All days claimed — come back tomorrow!"}
+                {streak < 7
+                  ? `Claim Day ${streak + 1} — ${formatTokens(DAILY_REWARDS[streak]?.tokens ?? 0)}`
+                  : "All days claimed — come back tomorrow!"}
               </button>
             ) : (
               <Link href="/sign-in">
@@ -270,7 +277,7 @@ export default function Rewards() {
             <div className="grid grid-cols-2 gap-3">
               {[
                 { label: "Friends Referred", value: "0", color: "#a78bfa" },
-                { label: "Tokens Earned", value: "🪙 0", color: "#4ade80" },
+                { label: "Tokens Earned", value: "0 tokens", color: "#4ade80" },
               ].map((stat) => (
                 <div key={stat.label} className="p-4 rounded-xl text-center" style={{ background: "#1a1a1a", border: "1px solid #222" }}>
                   <p className="text-2xl font-black mb-1" style={{ color: stat.color }}>{stat.value}</p>
