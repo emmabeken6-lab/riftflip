@@ -1,22 +1,26 @@
-import { Router } from "express";
+import { Router, type Request, type Response, type NextFunction } from "express";
 import passport from "passport";
 
 const router = Router();
 
-const BASE_PATH = process.env.BASE_PATH ?? "";
+function requireDiscordConfigured(_req: Request, res: Response, next: NextFunction) {
+  const clientId = process.env["DISCORD_CLIENT_ID"];
+  const clientSecret = process.env["DISCORD_CLIENT_SECRET"];
+  if (!clientId || !clientSecret) {
+    res.status(503).json({ error: "Discord OAuth not configured. Set DISCORD_CLIENT_ID and DISCORD_CLIENT_SECRET." });
+    return;
+  }
+  next();
+}
 
-router.get(
-  "/auth/discord",
-  passport.authenticate("discord"),
-);
+router.get("/auth/discord", requireDiscordConfigured, passport.authenticate("discord"));
 
 router.get(
   "/auth/discord/callback",
-  passport.authenticate("discord", {
-    failureRedirect: `${BASE_PATH}/sign-in?error=auth_failed`,
-  }),
+  requireDiscordConfigured,
+  passport.authenticate("discord", { failureRedirect: "/sign-in?error=auth_failed" }),
   (_req, res) => {
-    res.redirect(`${BASE_PATH}/`);
+    res.redirect("/");
   },
 );
 

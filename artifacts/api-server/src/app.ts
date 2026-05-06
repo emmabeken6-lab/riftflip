@@ -25,28 +25,33 @@ const callbackURL = primaryDomain
 
 type DiscordUser = Express.User;
 
-passport.use(
-  new DiscordStrategy(
-    {
-      clientID: DISCORD_CLIENT_ID,
-      clientSecret: DISCORD_CLIENT_SECRET,
-      callbackURL,
-      scope: ["identify", "email"],
-    },
-    (_accessToken, _refreshToken, profile, done) => {
-      const user: DiscordUser = {
-        id: profile.id,
-        username: profile.username,
-        discriminator: profile.discriminator ?? "0",
-        avatar: profile.avatar ?? null,
-        email: profile.email ?? null,
-        balance: 0,
-        joinedAt: new Date().toISOString(),
-      };
-      return done(null, user);
-    },
-  ),
-);
+if (DISCORD_CLIENT_ID && DISCORD_CLIENT_SECRET) {
+  passport.use(
+    new DiscordStrategy(
+      {
+        clientID: DISCORD_CLIENT_ID,
+        clientSecret: DISCORD_CLIENT_SECRET,
+        callbackURL,
+        scope: ["identify", "email"],
+      },
+      (_accessToken, _refreshToken, profile, done) => {
+        const user: DiscordUser = {
+          id: profile.id,
+          username: profile.username,
+          discriminator: profile.discriminator ?? "0",
+          avatar: profile.avatar ?? null,
+          email: profile.email ?? null,
+          balance: 0,
+          joinedAt: new Date().toISOString(),
+        };
+        return done(null, user);
+      },
+    ),
+  );
+  logger.info({ callbackURL }, "Discord OAuth strategy registered");
+} else {
+  logger.warn("DISCORD_CLIENT_ID or DISCORD_CLIENT_SECRET not set — Discord OAuth disabled");
+}
 
 passport.serializeUser((user, done) => {
   done(null, user);
@@ -72,13 +77,7 @@ app.use(
   }),
 );
 
-app.use(
-  cors({
-    credentials: true,
-    origin: true,
-  }),
-);
-
+app.use(cors({ credentials: true, origin: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

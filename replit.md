@@ -34,67 +34,48 @@ pnpm workspace monorepo. Riftflip is a dark cosmic-themed online casino web app 
 - **Workflow command**: `cd artifacts/discord-bot && python3 bot.py`
 - **Bot account**: Riftflip#1301 (ID: 1499613554481954866)
 - **Guild**: 1478390666261299220
-- **Web API**: aiohttp server on port 5000 (endpoints: `/api/health`, `/api/guilds`, `/api/guild/{id}/stats`, etc.)
+- **Web API**: aiohttp server on port 5001
 - **Token**: `DISCORD_BOT_TOKEN` secret
 
 ### Cogs (18 loaded)
-- `automod` — anti-link, anti-nuke, bad words, spam, caps filtering
-- `autoresponder` — keyword-triggered auto replies
-- `autorole` — auto assign roles on join, exclusive role groups
-- `casino` — slots, coinflip vs house, dice, blackjack, roulette, crash; LTC deposit/withdraw
-- `channels` — channel management utilities
-- `coinflip_pvp` — player-vs-player coinflip with lobbies and 10-min timeouts
-- `info` — userinfo, serverinfo, avatar, roleinfo, botinfo, ping, membercount
-- `leveling` — XP system, rank, leaderboard, level channels and roles
-- `moderation` — ban, kick, warn, warnings, mute, timeout, role management
-- `prefix_commands` — classic prefix command support (default prefix: `.`)
-- `profile_watch` — username/avatar change monitoring
-- `security` — anti-nuke and server security
-- `sticky` — sticky messages per channel
-- `tempactions` — temporary bans/mutes with auto-expiry
-- `utility` — slowmode, nuke, serverlock, announce, poll, embed builder
-- `verification` — button verification panel, alt detection, risk assessment
-- `voice` — voice channel management
-- `website` — `/tip`, `/webstats`, `/active`, `/leaderboard-wallet` (connected to Riftflip site)
+See previous notes — automod, autoresponder, autorole, casino, channels, coinflip_pvp, info, leveling, moderation, prefix_commands, profile_watch, security, sticky, tempactions, utility, verification, voice, website.
 
 ### Data Files (`artifacts/discord-bot/data/`)
-- `config.json` — per-guild settings (prefix, channels, automod config)
-- `balances.json` — LTC balances per guild/user
-- `casino_stats.json` — game stats
-- `levels.json` — XP and level data
-- `warnings.json` — moderation warnings
-- `banned_users.json` — ban records
-- `verification.json` — verification records
-- `autoroles.json`, `autoresponders.json`, `sticky.json`, `jailed.json`, `used_txs.json`, `profile_roles.json`
-
-### LTC Casino
-- Deposit address: `LagW6oTkbG1aBLjwnzPVZEPoWWPhW2HRFn`
-- Deposits verified against blockchain; `used_txs.json` prevents double-spend
+config.json, balances.json, casino_stats.json, levels.json, warnings.json, banned_users.json, verification.json, autoroles.json, autoresponders.json, sticky.json, jailed.json, used_txs.json, profile_roles.json
 
 ## Frontend Pages (`artifacts/riftflip/src/pages/`)
 - `home.tsx` — landing page
 - `games.tsx` — compact games panel (Coinflip, Jackpot, Minefield)
-- `leaderboard.tsx` — top players
 - `chat.tsx` — live chat
-- `profile.tsx` — user profile
+- `profile.tsx` — user profile (Discord avatar, balance, stats)
+- `wallet.tsx` — deposit/withdraw Robux
+- `rewards.tsx` — daily login, VIP tiers, referrals
+- `sign-in.tsx` — banner image + "Continue with Discord" button
 
-## Game Pages (`artifacts/riftflip/src/pages/`)
-- `coinflip.tsx` — heads/tails vs house
-- `jackpot.tsx` — jackpot wheel
-- `minefield.tsx` — minesweeper-style
+## Game Pages
+- `coinflip.tsx`, `jackpot.tsx`, `minefield.tsx`
 
 ## Authentication
 
-- **Provider**: Clerk Auth (Replit-managed), provisioned via `setupClerkWhitelabelAuth()`
-- **Env vars auto-set**: `CLERK_SECRET_KEY`, `CLERK_PUBLISHABLE_KEY`, `VITE_CLERK_PUBLISHABLE_KEY`
-- **Proxy path**: `/api/__clerk` (clerkProxyMiddleware in api-server)
-- **Sign-in page**: `/sign-in` — dark themed, Riftflip branded
-- **Sign-up page**: `/sign-up`
-- **Login methods**: Managed via Auth pane in Replit toolbar (Discord, Google, GitHub, etc.)
-- **Frontend**: `@clerk/react` — uses `<ClerkProvider>`, `useUser()`, `<Show when="signed-in/out">`
-- **TopNav**: Shows avatar + username + sign-out when signed in; "Sign In" button when signed out
-- **Wallet/Rewards**: Show "sign in" prompts for unauthenticated users; full UI unlocks on sign-in
-- **DO NOT use `<UserButton />`** — use `useUser()` hook + custom profile display
+- **Provider**: Custom Discord OAuth2 (passport-discord + express-session)
+- **Secrets required**: `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, optional `SESSION_SECRET`
+- **Callback URL** (add to Discord app): `https://<your-domain>/api/auth/discord/callback`
+- **Routes**: `GET /api/auth/discord` → redirect, `GET /api/auth/discord/callback`, `GET /api/auth/me`, `POST /api/auth/logout`
+- **Session storage**: In-memory (memorystore), 7-day cookie
+- **Frontend context**: `useAuth()` from `src/contexts/AuthContext.tsx` — returns `{ user, isSignedIn, isLoading, refetch }`
+- **DiscordUser shape**: `{ id, username, discriminator, avatar, email, balance, joinedAt }`
+- **Avatar helper**: `avatarUrl(user)` from AuthContext
+- **Sign-in page**: `/sign-in` — shows banner image + single "Continue with Discord" button
+- **Cookie**: httpOnly, secure in prod, sameSite=none in prod / lax in dev
+- **DO NOT use Clerk** — fully removed. Use `useAuth()` everywhere.
+
+## Design System
+
+- **bg**: `#111`, **cards**: `#1a1a1a`, **borders**: `#2a2a2a`/`#222`/`#333`
+- **inputs**: bg `#222` + border `#333`
+- **primary CTA**: `#7c3aed` (violet)
+- **nav**: `#151515` bg + `#222` border
+- **Discord brand**: `#5865F2`
 
 ## Key Commands
 
@@ -104,4 +85,8 @@ pnpm workspace monorepo. Riftflip is a dark cosmic-themed online casino web app 
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - `pnpm --filter @workspace/api-server run dev` — run API server locally
 
-See the `pnpm-workspace` skill for workspace structure details.
+## Gotchas
+
+- API server guards Discord strategy registration — server boots fine without the secrets, but auth routes return 503 until secrets are set.
+- In production, `cookie.secure = true` and `sameSite = "none"` — required for cross-path cookies through the Replit proxy.
+- Discord OAuth callback URL must be registered in the Discord Developer Portal exactly as constructed from `REPLIT_DOMAINS`.
