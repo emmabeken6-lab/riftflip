@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import { useAuth, avatarUrl } from "@/contexts/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Shield, Users, Star, CreditCard, FileText,
+  Shield, Users, Star, CreditCard, FileText, Gamepad2,
   Ban, Coins, ChevronRight, Search, Plus, Trash2,
   BarChart3, CheckCircle, XCircle, Crown,
   RefreshCw, Activity, Loader2, LogIn, AlertTriangle,
@@ -19,7 +19,7 @@ interface AntiAltResult { userId: string; username: string; accountAgeDays: numb
 interface RainEvent { id: string; adminName: string; totalAmount: number; endsAt: string; joiners: string[]; requirements: { minLevel?: number; minMessages?: number }; status: "active" | "ended"; tokensPerUser?: number; startedAt: string; }
 interface GiveawayRecord { id: string; adminName: string; prize: number; endsAt: string; entrants: string[]; requirements: { minLevel?: number; minMessages?: number }; status: "active" | "ended"; winnerId?: string; winnerName?: string; createdAt: string; }
 
-type Section = "overview" | "users" | "roles" | "payments" | "logs" | "login-logs" | "anti-alt" | "events" | "giveaways";
+type Section = "overview" | "users" | "roles" | "payments" | "logs" | "login-logs" | "anti-alt" | "events" | "giveaways" | "games" | "game-logs";
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
   finished: { bg: "#0a2a15", text: "#4ade80" },
@@ -37,7 +37,7 @@ const ACTION_ICONS: Record<string, string> = {
   make_admin: "🛡️", create_role: "➕", delete_role: "🗑️",
   deposit_confirmed: "💳", withdrawal_created: "💸", withdrawal_requested: "📋",
   tip_sent: "🎁", rain_started: "🌧", rain_ended: "☀️",
-  giveaway_created: "🎁", giveaway_ended: "🏆",
+  giveaway_created: "🎁", giveaway_ended: "🏆", game_settings_updated: "⚙️",
 };
 
 const AVAILABLE_PERMISSIONS = [
@@ -841,6 +841,121 @@ function GiveawaysSection() {
   );
 }
 
+interface GameSettingsData { coinflipWinChance: number; jackpotHouseEdge: number; minefieldHouseEdge: number; }
+interface GameLogEntry { id: string; game: string; userId: string; username: string; bet: number; outcome: "win" | "lose"; payout: number; createdAt: string; }
+
+function GameSettingsSection() {
+  const [settings, setSettings] = useState<GameSettingsData | null>(null);
+  const [coinflip, setCoinflip] = useState("50");
+  const [jackpot, setJackpot] = useState("5");
+  const [minefield, setMinefield] = useState("1");
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  useEffect(() => {
+    api<{ settings: GameSettingsData }>("/admin/game-settings").then((d) => {
+      setSettings(d.settings);
+      setCoinflip(String(d.settings.coinflipWinChance));
+      setJackpot(String(d.settings.jackpotHouseEdge));
+      setMinefield(String(d.settings.minefieldHouseEdge));
+    }).catch(() => {});
+  }, []);
+
+  const save = async () => {
+    setSaving(true); setMsg("");
+    try {
+      const r = await api<{ ok?: boolean; settings?: GameSettingsData; error?: string }>("/admin/game-settings", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          coinflipWinChance: Number(coinflip),
+          jackpotHouseEdge: Number(jackpot),
+          minefieldHouseEdge: Number(minefield),
+        }),
+      });
+      if (r.ok) { setSettings(r.settings ?? null); setMsg("✅ Settings saved!"); }
+      else { setMsg(`❌ ${r.error}`); }
+    } catch { setMsg("❌ Failed to save"); }
+    setSaving(false);
+    setTimeout(() => setMsg(""), 3000);
+  };
+
+  const SliderField = ({ label, value, onChange, desc }: { label: string; value: string; onChange: (v: string) => void; desc: string }) => (
+    <div className="p-4 rounded-xl mb-3" style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}>
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-white text-sm font-bold">{label}</p>
+        <div className="flex items-center gap-2">
+          <input type="number" value={value} onChange={(e) => onChange(e.target.value)} min={0} max={100} step={1}
+            className="w-16 px-2 py-1 rounded-lg text-white text-sm font-black text-center outline-none"
+            style={{ background: "#222", border: "1px solid #7c3aed" }} />
+          <span className="text-slate-400 text-sm">%</span>
+        </div>
+      </div>
+      <input type="range" min={0} max={100} step={1} value={value} onChange={(e) => onChange(e.target.value)}
+        className="w-full accent-violet-500" />
+      <p className="text-slate-600 text-xs mt-1">{desc}</p>
+    </div>
+  );
+
+  return (
+    <div>
+      <div className="mb-4 p-3 rounded-xl flex items-start gap-3" style={{ background: "#1a1200", border: "1px solid #3a2a00" }}>
+        <AlertTriangle size={14} className="text-yellow-500 flex-shrink-0 mt-0.5" />
+        <p className="text-yellow-600 text-xs">These settings affect all players in real time. Use responsibly. Current values: coinflip={settings?.coinflipWinChance ?? "…"}%, jackpot house={settings?.jackpotHouseEdge ?? "…"}%, mine house={settings?.minefieldHouseEdge ?? "…"}%</p>
+      </div>
+
+      <SliderField label="Coinflip — Player Win Chance" value={coinflip} onChange={setCoinflip}
+        desc={`At ${coinflip}%, players win ${coinflip}% of flips on average. 50% = fair. Below 50% = house edge.`} />
+      <SliderField label="Jackpot — House Edge" value={jackpot} onChange={setJackpot}
+        desc={`${jackpot}% of each pot is kept as house edge before distributing the prize.`} />
+      <SliderField label="Minefield — House Edge Override" value={minefield} onChange={setMinefield}
+        desc={`${minefield}% is deducted from multiplier payouts. 0% = mathematically fair (1% applied to formula).`} />
+
+      {msg && <p className="text-sm text-center mb-3 mt-2" style={{ color: msg.startsWith("✅") ? "#4ade80" : "#f87171" }}>{msg}</p>}
+
+      <button onClick={() => void save()} disabled={saving}
+        className="w-full py-3 rounded-xl text-white font-bold hover:opacity-90 flex items-center justify-center gap-2"
+        style={{ background: "#7c3aed" }}>
+        {saving ? <Loader2 size={15} className="animate-spin" /> : <Gamepad2 size={15} />} Save Game Settings
+      </button>
+    </div>
+  );
+}
+
+function GameLogsSection() {
+  const [logs, setLogs] = useState<GameLogEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    api<{ logs: GameLogEntry[] }>("/admin/game-logs").then((d) => { setLogs(d.logs ?? []); setLoading(false); }).catch(() => setLoading(false));
+  }, []);
+
+  return (
+    <div>
+      {loading ? <div className="flex justify-center py-8"><Loader2 size={22} className="animate-spin text-slate-700" /></div>
+        : logs.length === 0 ? (
+          <div className="text-center py-12 text-slate-600 text-sm">No game logs yet — play some games first</div>
+        ) : (
+          <div className="space-y-2">
+            {logs.map((log) => (
+              <div key={log.id} className="flex items-center gap-3 p-3 rounded-xl" style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}>
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{ background: log.outcome === "win" ? "#0a2a15" : "#2a0a0a", border: `1px solid ${log.outcome === "win" ? "#1a5a2a" : "#5a1a1a"}` }}>
+                  <span style={{ color: log.outcome === "win" ? "#4ade80" : "#f87171", fontWeight: 900, fontSize: 12 }}>
+                    {log.outcome === "win" ? "W" : "L"}
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-white text-sm font-semibold">{log.username} · <span className="text-violet-400">{log.game}</span></p>
+                  <p className="text-slate-500 text-xs">Bet: {log.bet.toLocaleString()} · Payout: {log.payout.toLocaleString()}</p>
+                </div>
+                <p className="text-slate-700 text-xs flex-shrink-0">{new Date(log.createdAt).toLocaleTimeString()}</p>
+              </div>
+            ))}
+          </div>
+        )}
+    </div>
+  );
+}
+
 function OverviewSection() {
   const [stats, setStats] = useState<{ totalUsers: number; totalBanned: number; totalBalance: number; totalPayments: number; totalVolume: number; totalLogins: number } | null>(null);
   useEffect(() => { api<typeof stats>("/admin/stats").then(setStats).catch(() => {}); }, []);
@@ -856,7 +971,7 @@ function OverviewSection() {
       <div className="p-4 rounded-xl" style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}>
         <p className="text-slate-500 text-xs mb-1 flex items-center gap-1"><BarChart3 size={12} /> Total Volume</p>
         <p className="text-white font-black text-2xl">🪙 {((stats?.totalVolume ?? 0)).toLocaleString()}</p>
-        <p className="text-slate-600 text-xs mt-0.5">≈ ${((stats?.totalVolume ?? 0) * 0.05).toFixed(2)} USD</p>
+        <p className="text-slate-600 text-xs mt-0.5">≈ ${((stats?.totalVolume ?? 0) / 30).toFixed(2)} USD</p>
       </div>
       <div className="p-4 rounded-xl" style={{ background: "#0d1f10", border: "1px solid #1a4a2a" }}>
         <div className="flex items-center gap-2 mb-1">
@@ -874,6 +989,8 @@ const NAV: { key: Section; label: string; icon: React.ComponentType<{ size?: num
   { key: "users", label: "Users", icon: Users },
   { key: "roles", label: "Roles", icon: Star },
   { key: "payments", label: "Payments", icon: CreditCard },
+  { key: "games", label: "Game Settings", icon: Gamepad2 },
+  { key: "game-logs", label: "Game Logs", icon: FileText },
   { key: "events", label: "Rain", icon: CloudRain },
   { key: "giveaways", label: "Giveaways", icon: Gift },
   { key: "logs", label: "Logs", icon: Activity },
@@ -952,6 +1069,8 @@ export default function AdminPanel() {
         {section === "users" && <UsersSection roles={roles} />}
         {section === "roles" && <RolesSection />}
         {section === "payments" && <PaymentsSection />}
+        {section === "games" && <GameSettingsSection />}
+        {section === "game-logs" && <GameLogsSection />}
         {section === "events" && <EventsSection />}
         {section === "giveaways" && <GiveawaysSection />}
         {section === "logs" && <LogsSection />}

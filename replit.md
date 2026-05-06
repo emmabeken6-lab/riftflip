@@ -26,8 +26,8 @@ pnpm workspace monorepo. Riftflip is a dark cosmic-themed online casino web app 
 
 ## Token Economy
 
-- **Rate**: $1 USD = 20 tokens (1 token = $0.05)
-- **Constant**: `USD_PER_TOKEN = 0.05` in wallet.tsx; `TOKENS_PER_USD = 20` in payments.ts
+- **Rate**: $1 USD = 30 tokens (1 token ≈ $0.033)
+- **Constant**: `USD_PER_TOKEN = 1/30` in wallet.tsx/profile.tsx; `TOKENS_PER_USD = 30` in payments.ts
 - **Never use "Robux" or "R$"** — always "tokens" and 🪙 emoji
 
 ## Frontend Pages (`artifacts/riftflip/src/pages/`)

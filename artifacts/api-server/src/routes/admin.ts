@@ -210,18 +210,15 @@ router.get("/admin/anti-alt", requireAdmin, (_req, res) => {
         });
       const alreadyIn = flagged.find((f) => f.userId === uid);
       if (!alreadyIn) {
-        const userLogs = ([] as typeof gameLogs).filter
-          ? []
-          : [];
-        const loginCount = flagged.length;
         const accountAgeMs = Date.now() - new Date(user.joinedAt).getTime();
         const accountAgeDays = Math.floor(accountAgeMs / (1000 * 60 * 60 * 24));
+        const userLoginCount = loginLogs.filter((l) => l.userId === uid).length;
         flagged.push({
           userId: uid,
           username: user.username,
           sharedWith,
           riskLevel: sharedWith.length > 1 ? "high" : "medium",
-          loginCount,
+          loginCount: userLoginCount,
           accountAgeDays,
         });
       }

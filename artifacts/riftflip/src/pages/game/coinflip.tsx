@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Plus, History, Users, CheckCircle, Shield, ChevronDown, ChevronUp, Copy } from "lucide-react";
+import { ArrowLeft, Plus, History, Users } from "lucide-react";
 import { useAuth, avatarUrl } from "@/contexts/AuthContext";
 
 /* ─── Types ────────────────────────────────────────────────────── */
@@ -19,12 +19,6 @@ interface CFGame {
   serverSeedHash?: string;
   clientSeed?: string;
   nonce?: number;
-}
-
-interface FairnessInfo {
-  serverSeedHash: string;
-  clientSeed: string;
-  nonce: number;
 }
 
 /* ─── Helpers ───────────────────────────────────────────────────── */
@@ -56,7 +50,7 @@ function Coin({ spinning, result, size = 120 }: { spinning: boolean; result: Sid
           border: "4px solid #f5c842", boxShadow: "0 0 24px rgba(245,200,66,0.4), inset 0 -4px 8px rgba(0,0,0,0.3)",
           display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column",
         }}>
-          <span style={{ fontSize: size * 0.32, lineHeight: 1 }}>👑</span>
+          <span style={{ fontSize: size * 0.38, lineHeight: 1, fontWeight: 900, color: "#7a5c00" }}>H</span>
           <span style={{ fontSize: size * 0.13, fontWeight: 900, color: "#7a5c00", letterSpacing: 1 }}>HEADS</span>
         </div>
 
@@ -67,7 +61,7 @@ function Coin({ spinning, result, size = 120 }: { spinning: boolean; result: Sid
           border: "4px solid #f87171", boxShadow: "0 0 24px rgba(248,113,113,0.4), inset 0 -4px 8px rgba(0,0,0,0.3)",
           display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column",
         }}>
-          <span style={{ fontSize: size * 0.32, lineHeight: 1 }}>🔥</span>
+          <span style={{ fontSize: size * 0.38, lineHeight: 1, fontWeight: 900, color: "#7a0000" }}>T</span>
           <span style={{ fontSize: size * 0.13, fontWeight: 900, color: "#7a0000", letterSpacing: 1 }}>TAILS</span>
         </div>
       </motion.div>
@@ -301,7 +295,7 @@ function FlipModal({
                   className="text-3xl font-black mb-1"
                   style={{ color: isWinner ? "#4ade80" : "#f87171" }}
                 >
-                  {isWinner ? "You Won! 🎉" : "You Lost"}
+                  {isWinner ? "You Won!" : "You Lost"}
                 </p>
                 <p className="text-slate-500 text-sm mb-2">
                   Result: <span style={{ color: result === "heads" ? "#f5c842" : "#f87171", fontWeight: 700 }}>
@@ -336,100 +330,6 @@ function FlipModal({
   );
 }
 
-/* ─── Fairness panel ────────────────────────────────────────────── */
-function FairnessPanel({ info, onChangeClientSeed }: { info: FairnessInfo | null; onChangeClientSeed: (s: string) => void }) {
-  const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState("");
-  const [copied, setCopied] = useState(false);
-
-  if (!info) return null;
-
-  const copy = (text: string) => {
-    navigator.clipboard.writeText(text).catch(() => {});
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
-
-  return (
-    <div className="mb-3 rounded-xl overflow-hidden" style={{ border: "1px solid #222" }}>
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between px-4 py-3 transition-colors hover:bg-[#1e1e1e]"
-        style={{ background: "#1a1a1a" }}
-      >
-        <div className="flex items-center gap-2">
-          <Shield size={13} className="text-green-500" />
-          <span className="text-green-500 text-xs font-bold">Provably Fair</span>
-          <span className="text-slate-600 text-xs">· Verify all outcomes</span>
-        </div>
-        {open ? <ChevronUp size={14} className="text-slate-600" /> : <ChevronDown size={14} className="text-slate-600" />}
-      </button>
-
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden"
-            style={{ background: "#161616", borderTop: "1px solid #222" }}
-          >
-            <div className="px-4 py-3 space-y-3 text-xs">
-              {/* Server seed hash */}
-              <div>
-                <p className="text-slate-600 mb-1">Server Seed Hash (SHA-256)</p>
-                <div className="flex gap-2">
-                  <code className="flex-1 text-slate-400 font-mono truncate px-2 py-1 rounded" style={{ background: "#222" }}>
-                    {info.serverSeedHash}
-                  </code>
-                  <button onClick={() => copy(info.serverSeedHash)} style={{ color: copied ? "#4ade80" : "#555" }}>
-                    {copied ? <CheckCircle size={13} /> : <Copy size={13} />}
-                  </button>
-                </div>
-              </div>
-              {/* Client seed */}
-              <div>
-                <p className="text-slate-600 mb-1">Client Seed</p>
-                {editing ? (
-                  <div className="flex gap-2">
-                    <input
-                      value={draft}
-                      onChange={(e) => setDraft(e.target.value)}
-                      className="flex-1 px-2 py-1 rounded font-mono text-white outline-none"
-                      style={{ background: "#222", border: "1px solid #7c3aed" }}
-                      maxLength={64}
-                    />
-                    <button
-                      onClick={() => { onChangeClientSeed(draft); setEditing(false); }}
-                      className="px-3 py-1 rounded font-bold text-white"
-                      style={{ background: "#7c3aed" }}
-                    >Save</button>
-                  </div>
-                ) : (
-                  <div className="flex gap-2">
-                    <code className="flex-1 text-slate-400 font-mono truncate px-2 py-1 rounded" style={{ background: "#222" }}>
-                      {info.clientSeed}
-                    </code>
-                    <button onClick={() => { setDraft(info.clientSeed); setEditing(true); }} className="text-violet-400 font-semibold">Edit</button>
-                  </div>
-                )}
-              </div>
-              <div className="flex items-center gap-2 text-slate-700">
-                <span>Nonce: <span className="text-slate-500">{info.nonce}</span></span>
-              </div>
-              <p className="text-slate-700 leading-relaxed">
-                HMAC-SHA256(serverSeed, clientSeed:{info.nonce}) determines each outcome.
-                The server seed is revealed after the game so you can verify independently.
-              </p>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
 /* ─── Main page ─────────────────────────────────────────────────── */
 export default function CoinflipGame() {
   const { user } = useAuth();
@@ -439,28 +339,7 @@ export default function CoinflipGame() {
   const [betAmount, setBetAmount] = useState("");
   const [side, setSide] = useState<Side>("heads");
   const [activeFlip, setActiveFlip] = useState<{ game: CFGame; mySide: Side } | null>(null);
-  const [fairness, setFairness] = useState<FairnessInfo | null>(null);
   const [history, setHistory] = useState<CFGame[]>([]);
-
-  useEffect(() => {
-    fetch("/api/fairness/init", { credentials: "include" })
-      .then((r) => r.json() as Promise<FairnessInfo>)
-      .then(setFairness)
-      .catch(() => {});
-  }, []);
-
-  const changeClientSeed = async (seed: string) => {
-    try {
-      const r = await fetch("/api/fairness/client-seed", {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientSeed: seed }),
-      });
-      const d = await r.json() as { clientSeed: string; nonce: number };
-      setFairness((f) => f ? { ...f, clientSeed: d.clientSeed, nonce: d.nonce } : f);
-    } catch {}
-  };
 
   const createGame = () => {
     if (!betAmount || !user) return;
@@ -491,7 +370,6 @@ export default function CoinflipGame() {
     const done = games.find((g) => g.id === gameId);
     if (done) setHistory((h) => [{ ...done, status: "done", winner }, ...h]);
     setActiveFlip(null);
-    setFairness((f) => f ? { ...f, nonce: f.nonce + 1 } : f);
   };
 
   const openGames = games.filter((g) => g.status === "waiting");
@@ -543,9 +421,6 @@ export default function CoinflipGame() {
 
       {/* Content */}
       <div className="px-4 pt-4 pb-24">
-        {/* Fairness panel */}
-        <FairnessPanel info={fairness} onChangeClientSeed={changeClientSeed} />
-
         <AnimatePresence mode="wait">
           <motion.div key={tab} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
             {tab === "open" ? (
