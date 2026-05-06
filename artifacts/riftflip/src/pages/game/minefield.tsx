@@ -1,335 +1,366 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Plus, History, Loader2 } from "lucide-react";
+import { ArrowLeft, Shield, ChevronDown, ChevronUp, Copy, CheckCircle } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
-type Tab = "active" | "history";
+const GRID_SIZE = 25;
+const MINE_OPTIONS = [1, 3, 5, 10, 15, 20, 24];
 
-const GRID_SIZE = 5;
-const MINE_COUNT = 5;
-
-function generateGrid() {
-  const cells = Array(GRID_SIZE * GRID_SIZE).fill(false);
-  const mines = new Set<number>();
-  while (mines.size < MINE_COUNT) {
-    mines.add(Math.floor(Math.random() * cells.length));
+function getMultiplier(safeRevealed: number, mineCount: number): number {
+  const totalSafe = GRID_SIZE - mineCount;
+  if (safeRevealed === 0) return 1.0;
+  let m = 1.0;
+  for (let i = 0; i < safeRevealed; i++) {
+    m *= (GRID_SIZE - mineCount - i) / (GRID_SIZE - i);
   }
-  return cells.map((_, i) => mines.has(i));
+  const houseEdge = 0.99;
+  return Math.max(1.01, parseFloat((houseEdge / m).toFixed(2)));
+}
+
+function FairnessBar({ hash, clientSeed, nonce, onEdit }: {
+  hash: string; clientSeed: string; nonce: number; onEdit: (s: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(clientSeed);
+  const [copied, setCopied] = useState(false);
+
+  const copy = () => {
+    navigator.clipboard.writeText(hash).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
+  return (
+    <div className="mb-3 rounded-xl overflow-hidden" style={{ border: "1px solid #222" }}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-[#1e1e1e]"
+        style={{ background: "#1a1a1a" }}
+      >
+        <div className="flex items-center gap-2">
+          <Shield size={13} className="text-green-500" />
+          <span className="text-green-500 text-xs font-bold">Provably Fair</span>
+          <span className="text-slate-600 text-xs">· Nonce {nonce}</span>
+        </div>
+        {open ? <ChevronUp size={14} className="text-slate-600" /> : <ChevronDown size={14} className="text-slate-600" />}
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden" style={{ background: "#161616", borderTop: "1px solid #222" }}>
+            <div className="px-4 py-3 space-y-2 text-xs">
+              <p className="text-slate-600">Server Seed Hash</p>
+              <div className="flex gap-2">
+                <code className="flex-1 text-slate-400 font-mono truncate px-2 py-1 rounded" style={{ background: "#222" }}>{hash}</code>
+                <button onClick={copy} style={{ color: copied ? "#4ade80" : "#555" }}>
+                  {copied ? <CheckCircle size={13} /> : <Copy size={13} />}
+                </button>
+              </div>
+              <p className="text-slate-600">Client Seed</p>
+              {editing ? (
+                <div className="flex gap-2">
+                  <input value={draft} onChange={(e) => setDraft(e.target.value)} maxLength={64}
+                    className="flex-1 px-2 py-1 rounded font-mono text-white outline-none text-xs"
+                    style={{ background: "#222", border: "1px solid #7c3aed" }} />
+                  <button onClick={() => { onEdit(draft); setEditing(false); }} className="px-2 py-1 rounded font-bold text-white text-xs" style={{ background: "#7c3aed" }}>Save</button>
+                </div>
+              ) : (
+                <div className="flex gap-2 items-center">
+                  <code className="flex-1 text-slate-400 font-mono truncate px-2 py-1 rounded" style={{ background: "#222" }}>{clientSeed}</code>
+                  <button onClick={() => { setDraft(clientSeed); setEditing(true); }} className="text-violet-400 font-semibold text-xs">Edit</button>
+                </div>
+              )}
+              <p className="text-slate-700 leading-relaxed">Mine positions derived from HMAC-SHA256(serverSeed, clientSeed:{nonce}). Server seed revealed after cashout.</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
 }
 
 export default function MinefieldGame() {
-  const [tab, setTab] = useState<Tab>("active");
-  const [showPlay, setShowPlay] = useState(false);
+  const { user } = useAuth();
   const [betAmount, setBetAmount] = useState("");
+  const [mineCount, setMineCount] = useState(5);
   const [playing, setPlaying] = useState(false);
-  const [grid, setGrid] = useState<boolean[]>([]);
-  const [revealed, setRevealed] = useState<boolean[]>([]);
+  const [mines, setMines] = useState<Set<number>>(new Set());
+  const [revealed, setRevealed] = useState<boolean[]>(Array(GRID_SIZE).fill(false));
   const [gameOver, setGameOver] = useState<"win" | "lose" | null>(null);
-  const [multiplier, setMultiplier] = useState(1.0);
+  const [safeCount, setSafeCount] = useState(0);
+  const [showSetup, setShowSetup] = useState(false);
+  const [fairness, setFairness] = useState<{ serverSeedHash: string; clientSeed: string; nonce: number } | null>(null);
 
-  const startGame = () => {
-    const newGrid = generateGrid();
-    setGrid(newGrid);
-    setRevealed(Array(GRID_SIZE * GRID_SIZE).fill(false));
+  useEffect(() => {
+    fetch("/api/fairness/init", { credentials: "include" })
+      .then((r) => r.json() as Promise<{ serverSeedHash: string; clientSeed: string; nonce: number }>)
+      .then(setFairness)
+      .catch(() => {});
+  }, []);
+
+  const changeClientSeed = async (seed: string) => {
+    try {
+      const r = await fetch("/api/fairness/client-seed", {
+        method: "POST", credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clientSeed: seed }),
+      });
+      const d = await r.json() as { clientSeed: string; nonce: number };
+      setFairness((f) => f ? { ...f, clientSeed: d.clientSeed, nonce: d.nonce } : f);
+    } catch {}
+  };
+
+  const multiplier = getMultiplier(safeCount, mineCount);
+  const profit = Math.round(Number(betAmount || 0) * multiplier);
+
+  const startGame = async () => {
+    if (!betAmount) return;
+    try {
+      const r = await fetch("/api/fairness/mines", {
+        method: "POST", credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mineCount, gridSize: GRID_SIZE }),
+      });
+      const d = await r.json() as { mines: number[]; nonce: number; serverSeedHash: string; clientSeed: string };
+      setMines(new Set(d.mines));
+      setFairness((f) => f ? { ...f, nonce: d.nonce + 1 } : f);
+    } catch {
+      const positions = new Set<number>();
+      while (positions.size < mineCount) positions.add(Math.floor(Math.random() * GRID_SIZE));
+      setMines(positions);
+    }
+    setRevealed(Array(GRID_SIZE).fill(false));
     setGameOver(null);
-    setMultiplier(1.0);
+    setSafeCount(0);
     setPlaying(true);
-    setShowPlay(false);
+    setShowSetup(false);
   };
 
   const revealCell = (i: number) => {
     if (!playing || revealed[i] || gameOver) return;
-    const newRevealed = [...revealed];
-    newRevealed[i] = true;
-    setRevealed(newRevealed);
-    if (grid[i]) {
+    const next = [...revealed];
+    next[i] = true;
+    setRevealed(next);
+    if (mines.has(i)) {
       setGameOver("lose");
       setPlaying(false);
     } else {
-      const safeCount = newRevealed.filter((r, idx) => r && !grid[idx]).length;
-      setMultiplier(parseFloat((1 + safeCount * 0.15).toFixed(2)));
+      setSafeCount((c) => c + 1);
     }
   };
 
-  const cashOut = () => {
+  const cashOut = async () => {
     setGameOver("win");
     setPlaying(false);
+    try {
+      await fetch("/api/fairness/reveal", { method: "POST", credentials: "include" });
+    } catch {}
   };
 
   const reset = () => {
     setPlaying(false);
-    setGrid([]);
-    setRevealed([]);
+    setMines(new Set());
+    setRevealed(Array(GRID_SIZE).fill(false));
     setGameOver(null);
-    setMultiplier(1.0);
+    setSafeCount(0);
     setBetAmount("");
   };
 
+  const QUICK = [100, 500, 1000, 5000];
+
   return (
-    <div className="min-h-screen" style={{ background: "#111" }} data-testid="minefield-page">
+    <div className="min-h-screen pb-24" style={{ background: "#111" }}>
 
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-4" style={{ borderBottom: "1px solid #222" }}>
         <div className="flex items-center gap-3">
           <Link href="/games">
-            <button
-              className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors hover:bg-[#222]"
-              style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}
-              data-testid="back-btn"
-            >
+            <button className="w-9 h-9 rounded-lg flex items-center justify-center hover:bg-[#222]" style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}>
               <ArrowLeft size={18} className="text-slate-400" />
             </button>
           </Link>
-          <div className="flex items-center gap-2.5">
-            <span className="text-3xl">💣</span>
-            <div>
-              <h1 className="text-white font-black text-xl leading-tight">Minefield</h1>
-              <p className="text-slate-500 text-xs">Avoid mines, collect gems</p>
-            </div>
+          <div>
+            <h1 className="text-white font-black text-xl leading-tight">Minefield</h1>
+            <p className="text-slate-500 text-xs">Avoid mines · cash out anytime</p>
           </div>
         </div>
-        <button
-          onClick={() => (playing ? cashOut() : setShowPlay(true))}
-          className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-white text-sm font-bold transition-all hover:opacity-90"
-          style={{ background: playing ? "#059669" : "#7c3aed" }}
-          data-testid={playing ? "cashout-btn" : "play-btn"}
-        >
-          {playing ? `Cash Out ${multiplier}x` : <><Plus size={15} /> Play</>}
-        </button>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex px-4 pt-4 gap-2" data-testid="game-tabs">
-        {([["active", "Active Games"], ["history", "History"]] as const).map(([key, label]) => (
-          <button
-            key={key}
-            onClick={() => setTab(key)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
-            style={{
-              background: tab === key ? "#1e1e1e" : "#161616",
-              border: tab === key ? "1px solid #444" : "1px solid #2a2a2a",
-              color: tab === key ? "#c4b5fd" : "#555",
-            }}
-            data-testid={`tab-${key}`}
-          >
-            {key === "history" && <History size={14} />}
-            {label}
+        {playing ? (
+          <button onClick={cashOut} className="px-4 py-2.5 rounded-lg text-white text-sm font-bold hover:opacity-90" style={{ background: "#059669" }}>
+            Cash Out {multiplier}x
           </button>
-        ))}
+        ) : (
+          <button onClick={() => setShowSetup(true)} className="px-4 py-2.5 rounded-lg text-white text-sm font-bold hover:opacity-90 flex items-center gap-1" style={{ background: "#7c3aed" }}>
+            Play
+          </button>
+        )}
       </div>
 
-      {/* Content */}
-      <div className="px-4 pt-4" data-testid="tab-content">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={tab}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.18 }}
-          >
-            {tab === "active" ? (
-              playing || gameOver ? (
-                <div
-                  className="rounded-xl p-5"
-                  style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}
-                  data-testid="game-board"
-                >
-                  {/* Stats row */}
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <p className="text-slate-600 text-xs">Bet</p>
-                      <p className="text-white font-bold">R$ {betAmount || "0"}</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-slate-600 text-xs">Multiplier</p>
-                      <p
-                        className="text-2xl font-black"
-                        style={{ color: gameOver === "win" ? "#22c55e" : gameOver === "lose" ? "#ef4444" : "#a78bfa" }}
-                      >
-                        {multiplier}x
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-slate-600 text-xs">Profit</p>
-                      <p className="text-green-500 font-bold">
-                        R$ {Math.round(Number(betAmount || 0) * multiplier).toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
+      <div className="px-4 pt-4">
+        {/* Fairness panel */}
+        {fairness && (
+          <FairnessBar hash={fairness.serverSeedHash} clientSeed={fairness.clientSeed} nonce={fairness.nonce} onEdit={changeClientSeed} />
+        )}
 
-                  {/* Result banner */}
-                  <AnimatePresence>
-                    {gameOver && (
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="mb-4 p-3 rounded-lg text-center font-bold text-sm"
-                        style={{
-                          background: gameOver === "win" ? "#0a1f14" : "#1f0a0a",
-                          border: `1px solid ${gameOver === "win" ? "#1a4a2a" : "#4a1a1a"}`,
-                          color: gameOver === "win" ? "#22c55e" : "#f87171",
-                        }}
-                        data-testid="game-result"
-                      >
-                        {gameOver === "win" ? `Cashed out at ${multiplier}x!` : "Boom! You hit a mine!"}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  {/* Grid */}
-                  <div
-                    className="grid gap-2 mb-4"
-                    style={{ gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)` }}
-                    data-testid="mine-grid"
-                  >
-                    {Array(GRID_SIZE * GRID_SIZE).fill(null).map((_, i) => {
-                      const isRevealed = revealed[i];
-                      const isMine = grid[i];
-                      const showMine = isRevealed && isMine;
-                      const showGem = isRevealed && !isMine;
-                      const showAll = gameOver === "lose" && isMine && !revealed[i];
-
-                      return (
-                        <motion.button
-                          key={i}
-                          whileTap={{ scale: 0.92 }}
-                          onClick={() => revealCell(i)}
-                          className="aspect-square rounded-lg flex items-center justify-center text-xl transition-colors"
-                          style={{
-                            background: isRevealed
-                              ? showMine ? "#2a0a0a" : "#0a1f0a"
-                              : showAll ? "#1f0a0a" : "#222",
-                            border: isRevealed
-                              ? showMine ? "1px solid #5a1a1a" : "1px solid #1a5a1a"
-                              : showAll ? "1px solid #3a1a1a" : "1px solid #333",
-                            cursor: playing && !isRevealed && !gameOver ? "pointer" : "default",
-                          }}
-                          disabled={!!gameOver || isRevealed || !playing}
-                          data-testid={`cell-${i}`}
-                        >
-                          {showMine || showAll ? "💣" : showGem ? "💎" : ""}
-                        </motion.button>
-                      );
-                    })}
-                  </div>
-
-                  {gameOver && (
-                    <button
-                      onClick={reset}
-                      className="w-full py-3 rounded-lg text-white font-bold text-sm transition-all hover:opacity-90"
-                      style={{ background: "#7c3aed" }}
-                      data-testid="play-again-btn"
-                    >
-                      Play Again
-                    </button>
-                  )}
+        {(playing || gameOver) ? (
+          <div className="rounded-xl p-4" style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}>
+            {/* Stats */}
+            <div className="grid grid-cols-3 gap-3 mb-4">
+              {[
+                { label: "Bet", val: `R$ ${Number(betAmount).toLocaleString()}` },
+                { label: "Multiplier", val: `${multiplier}x`, highlight: gameOver === "win" ? "#4ade80" : gameOver === "lose" ? "#f87171" : "#a78bfa" },
+                { label: "Profit", val: `R$ ${profit.toLocaleString()}`, highlight: gameOver === "win" ? "#4ade80" : undefined },
+              ].map((s) => (
+                <div key={s.label} className="text-center">
+                  <p className="text-slate-600 text-xs">{s.label}</p>
+                  <p className="font-black text-base" style={{ color: s.highlight ?? "#e5e5e5" }}>{s.val}</p>
                 </div>
-              ) : (
-                <div
-                  className="rounded-xl p-10 flex flex-col items-center justify-center text-center"
-                  style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", minHeight: "300px" }}
-                  data-testid="active-empty"
+              ))}
+            </div>
+
+            {/* Result banner */}
+            <AnimatePresence>
+              {gameOver && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+                  className="mb-4 p-3 rounded-lg text-center font-bold text-sm"
+                  style={{
+                    background: gameOver === "win" ? "#0a1f14" : "#1f0a0a",
+                    border: `1px solid ${gameOver === "win" ? "#1a4a2a" : "#4a1a1a"}`,
+                    color: gameOver === "win" ? "#22c55e" : "#f87171",
+                  }}
                 >
-                  <Loader2 size={36} className="text-slate-700 mb-4 animate-spin" />
-                  <p className="text-white font-bold mb-1">No active games</p>
-                  <p className="text-slate-500 text-sm mb-6">Start a new game to begin playing</p>
-                  <button
-                    onClick={() => setShowPlay(true)}
-                    className="px-6 py-2.5 rounded-lg text-white font-bold text-sm transition-all hover:opacity-90"
-                    style={{ background: "#7c3aed" }}
-                    data-testid="start-game-btn"
+                  {gameOver === "win" ? `Cashed out at ${multiplier}x! +R$ ${profit.toLocaleString()}` : "💥 BOOM! Hit a mine!"}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Grid */}
+            <div className="grid gap-1.5 mb-4" style={{ gridTemplateColumns: "repeat(5, 1fr)" }}>
+              {Array(GRID_SIZE).fill(null).map((_, i) => {
+                const isRev = revealed[i];
+                const isMine = mines.has(i);
+                const showBoom = isRev && isMine;
+                const showGem = isRev && !isMine;
+                const revealAll = gameOver === "lose" && isMine && !revealed[i];
+
+                return (
+                  <motion.button
+                    key={i}
+                    whileTap={{ scale: playing && !isRev && !gameOver ? 0.88 : 1 }}
+                    onClick={() => revealCell(i)}
+                    className="aspect-square rounded-lg flex items-center justify-center text-lg font-bold"
+                    style={{
+                      background: showBoom || revealAll ? "#2a0a0a" : showGem ? "#0a2a15" : "#222",
+                      border: showBoom || revealAll ? "1px solid #5a1a1a" : showGem ? "1px solid #1a5a2a" : "1px solid #333",
+                      cursor: playing && !isRev && !gameOver ? "pointer" : "default",
+                    }}
+                    disabled={!!gameOver || isRev || !playing}
                   >
-                    Start Game
-                  </button>
-                </div>
-              )
-            ) : (
-              <div
-                className="rounded-xl p-10 flex flex-col items-center justify-center text-center"
-                style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", minHeight: "300px" }}
-                data-testid="history-empty"
-              >
-                <History size={36} className="text-slate-700 mb-4" />
-                <p className="text-white font-bold mb-1">No history yet</p>
-                <p className="text-slate-500 text-sm">Your minefield results will appear here</p>
-              </div>
+                    <AnimatePresence>
+                      {(showBoom || revealAll) && (
+                        <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-xl">💣</motion.span>
+                      )}
+                      {showGem && (
+                        <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-xl">💎</motion.span>
+                      )}
+                    </AnimatePresence>
+                  </motion.button>
+                );
+              })}
+            </div>
+
+            {/* Mines info */}
+            <p className="text-center text-slate-600 text-xs mb-3">
+              {mineCount} mines hidden · {safeCount} gems found
+            </p>
+
+            {gameOver && (
+              <button onClick={reset} className="w-full py-3 rounded-lg text-white font-bold text-sm hover:opacity-90" style={{ background: "#7c3aed" }}>
+                Play Again
+              </button>
             )}
-          </motion.div>
-        </AnimatePresence>
+
+            {playing && (
+              <button onClick={cashOut} className="w-full py-3 rounded-lg text-white font-bold text-sm hover:opacity-90" style={{ background: "#059669" }}>
+                Cash Out {multiplier}x · R$ {profit.toLocaleString()}
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="rounded-xl p-10 flex flex-col items-center justify-center text-center" style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", minHeight: "300px" }}>
+            <div className="text-5xl mb-4">💣</div>
+            <p className="text-white font-bold mb-1">Minefield</p>
+            <p className="text-slate-500 text-sm mb-6">Choose a bet and mine count to start</p>
+            <button onClick={() => setShowSetup(true)} className="px-8 py-3 rounded-lg text-white font-bold hover:opacity-90" style={{ background: "#7c3aed" }}>
+              Start Game
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Play Sheet */}
+      {/* Setup sheet */}
       <AnimatePresence>
-        {showPlay && (
+        {showSetup && (
           <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 z-40" style={{ background: "rgba(0,0,0,0.75)" }}
+              onClick={() => setShowSetup(false)} />
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-40"
-              style={{ background: "rgba(0,0,0,0.75)" }}
-              onClick={() => setShowPlay(false)}
-              data-testid="sheet-backdrop"
-            />
-            <motion.div
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
+              initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 28, stiffness: 300 }}
               className="fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl px-5 pt-5 pb-10"
               style={{ background: "#1a1a1a", borderTop: "1px solid #2a2a2a" }}
-              data-testid="play-sheet"
             >
               <div className="w-10 h-1 rounded-full bg-[#333] mx-auto mb-5" />
               <h2 className="text-white font-black text-xl mb-1">Start Minefield</h2>
-              <p className="text-slate-500 text-sm mb-5">Reveal cells to find gems. Hit a mine and lose everything!</p>
+              <p className="text-slate-500 text-sm mb-5">More mines = higher multiplier</p>
 
-              <p className="text-slate-400 text-sm mb-2">Bet amount (R$)</p>
-              <div className="flex items-center gap-3 px-4 py-3 rounded-lg mb-4" style={{ background: "#222", border: "1px solid #333" }}>
-                <span className="text-violet-400 font-bold text-lg">R$</span>
-                <input
-                  type="number"
-                  value={betAmount}
-                  onChange={(e) => setBetAmount(e.target.value)}
-                  placeholder="0"
-                  className="flex-1 bg-transparent text-white text-xl font-bold outline-none"
-                  style={{ color: "#e5e5e5" }}
-                  data-testid="bet-input"
-                />
+              {/* Mine count picker */}
+              <p className="text-slate-400 text-sm mb-2">Mine count</p>
+              <div className="flex gap-2 flex-wrap mb-5">
+                {MINE_OPTIONS.map((m) => (
+                  <button key={m} onClick={() => setMineCount(m)}
+                    className="px-4 py-2 rounded-lg text-sm font-bold"
+                    style={{
+                      background: mineCount === m ? "#2a1f44" : "#222",
+                      border: mineCount === m ? "1px solid #7c3aed" : "1px solid #2a2a2a",
+                      color: mineCount === m ? "#c4b5fd" : "#555",
+                    }}>
+                    {m} 💣
+                  </button>
+                ))}
               </div>
 
-              <div className="grid grid-cols-4 gap-2 mb-5">
-                {[100, 500, 1000, 5000].map((amt) => (
-                  <button
-                    key={amt}
-                    onClick={() => setBetAmount(String(amt))}
-                    className="py-2 rounded-lg text-xs font-bold transition-colors"
-                    style={{
-                      background: betAmount === String(amt) ? "#2a1f44" : "#222",
-                      border: betAmount === String(amt) ? "1px solid #7c3aed" : "1px solid #2a2a2a",
-                      color: betAmount === String(amt) ? "#c4b5fd" : "#555",
-                    }}
-                    data-testid={`quick-${amt}`}
-                  >
+              {/* Bet amount */}
+              <p className="text-slate-400 text-sm mb-2">Bet amount (R$)</p>
+              <div className="flex items-center gap-3 px-4 py-3 rounded-lg mb-3" style={{ background: "#222", border: "1px solid #333" }}>
+                <span className="text-violet-400 font-bold text-lg">R$</span>
+                <input type="number" value={betAmount} onChange={(e) => setBetAmount(e.target.value)} placeholder="0"
+                  className="flex-1 bg-transparent text-white text-xl font-bold outline-none" />
+              </div>
+
+              <div className="grid grid-cols-4 gap-2 mb-4">
+                {QUICK.map((amt) => (
+                  <button key={amt} onClick={() => setBetAmount(String(amt))}
+                    className="py-2 rounded-lg text-xs font-bold"
+                    style={{ background: betAmount === String(amt) ? "#2a1f44" : "#222", border: betAmount === String(amt) ? "1px solid #7c3aed" : "1px solid #2a2a2a", color: betAmount === String(amt) ? "#c4b5fd" : "#555" }}>
                     R${amt >= 1000 ? `${amt / 1000}K` : amt}
                   </button>
                 ))}
               </div>
 
-              <button
-                onClick={startGame}
-                className="w-full py-3.5 rounded-lg text-white font-black text-base transition-all hover:opacity-90"
-                style={{
-                  background: betAmount ? "#7c3aed" : "#1e1e1e",
-                  border: betAmount ? "none" : "1px solid #2a2a2a",
-                  color: betAmount ? "#fff" : "#444",
-                  cursor: betAmount ? "pointer" : "not-allowed",
-                }}
-                disabled={!betAmount}
-                data-testid="confirm-play-btn"
-              >
-                Start Game
+              {betAmount && (
+                <p className="text-center text-slate-600 text-xs mb-4">
+                  First gem: {getMultiplier(1, mineCount)}x · Max: {getMultiplier(GRID_SIZE - mineCount, mineCount)}x
+                </p>
+              )}
+
+              <button onClick={startGame} disabled={!betAmount || !user}
+                className="w-full py-3.5 rounded-lg text-white font-black text-base hover:opacity-90"
+                style={{ background: betAmount && user ? "#7c3aed" : "#1e1e1e", color: betAmount && user ? "#fff" : "#444" }}>
+                {!user ? "Sign in to play" : betAmount ? "Start Game" : "Enter amount"}
               </button>
             </motion.div>
           </>
