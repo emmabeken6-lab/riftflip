@@ -1,4 +1,5 @@
 import { Switch, Route, Router as WouterRouter } from "wouter";
+import { useState, useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -15,6 +16,8 @@ import JackpotGame from "@/pages/game/jackpot";
 import MinefieldGame from "@/pages/game/minefield";
 import Profile from "@/pages/profile";
 import SignIn from "@/pages/sign-in";
+import AdminPanel from "@/pages/admin";
+import SplashScreen from "@/components/SplashScreen";
 
 const queryClient = new QueryClient();
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -32,17 +35,28 @@ function Router() {
       <Route path="/wallet" component={Wallet} />
       <Route path="/profile" component={Profile} />
       <Route path="/sign-in" component={SignIn} />
+      <Route path="/admin" component={AdminPanel} />
       <Route component={NotFound} />
     </Switch>
   );
 }
 
 function App() {
+  const [splashDone, setSplashDone] = useState(() => {
+    try { return sessionStorage.getItem("rift_splash") === "1"; } catch { return false; }
+  });
+
+  const handleSplashDone = () => {
+    try { sessionStorage.setItem("rift_splash", "1"); } catch {}
+    setSplashDone(true);
+  };
+
   return (
     <WouterRouter base={basePath}>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <TooltipProvider>
+            {!splashDone && <SplashScreen onDone={handleSplashDone} />}
             <Layout>
               <Router />
             </Layout>

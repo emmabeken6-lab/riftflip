@@ -7,6 +7,7 @@ import { Strategy as DiscordStrategy } from "passport-discord";
 import MemoryStore from "memorystore";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { upsertUser, isAdmin } from "./lib/store";
 import "./types/passport.d.ts";
 
 const MemoryStoreSession = MemoryStore(session);
@@ -35,7 +36,7 @@ if (DISCORD_CLIENT_ID && DISCORD_CLIENT_SECRET) {
         scope: ["identify", "email"],
       },
       (_accessToken, _refreshToken, profile, done) => {
-        const user: DiscordUser = {
+        const record = upsertUser({
           id: profile.id,
           username: profile.username,
           discriminator: profile.discriminator ?? "0",
@@ -43,6 +44,16 @@ if (DISCORD_CLIENT_ID && DISCORD_CLIENT_SECRET) {
           email: profile.email ?? null,
           balance: 0,
           joinedAt: new Date().toISOString(),
+          isAdmin: isAdmin(profile.id),
+        });
+        const user: DiscordUser = {
+          id: record.id,
+          username: record.username,
+          discriminator: record.discriminator,
+          avatar: record.avatar,
+          email: record.email,
+          balance: record.balance,
+          joinedAt: record.joinedAt,
         };
         return done(null, user);
       },
