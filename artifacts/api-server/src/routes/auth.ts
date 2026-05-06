@@ -1,6 +1,6 @@
 import { Router, type Request, type Response, type NextFunction } from "express";
 import passport from "passport";
-import { loginLogs } from "../lib/store";
+import { loginLogs, users, recordIpLogin } from "../lib/store";
 
 const router = Router();
 
@@ -22,16 +22,25 @@ router.get(
   passport.authenticate("discord", { failureRedirect: "/sign-in?error=auth_failed" }),
   (req, res) => {
     if (req.user) {
+      const ip = (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim() ?? req.ip ?? "unknown";
       loginLogs.unshift({
         id: `login-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         userId: req.user.id,
         username: req.user.username,
         avatar: req.user.avatar,
-        ip: (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim() ?? req.ip ?? "unknown",
+        ip,
         userAgent: req.headers["user-agent"] ?? "unknown",
         createdAt: new Date().toISOString(),
       });
       if (loginLogs.length > 500) loginLogs.splice(500);
+      recordIpLogin(ip, req.user.id);
+
+      const userRecord = users.get(req.user.id);
+      if (userRecord?.banned) {
+        req.logout(() => {});
+        res.redirect("/sign-in?error=banned");
+        return;
+      }
     }
     res.redirect("/");
   },

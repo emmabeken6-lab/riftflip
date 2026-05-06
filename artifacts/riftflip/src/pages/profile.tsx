@@ -7,7 +7,7 @@ import {
 import { useState } from "react";
 import { motion } from "framer-motion";
 
-const USD_PER_TOKEN = 0.05;
+const USD_PER_TOKEN = 1 / 30;
 
 const DiscordIcon = () => (
   <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">

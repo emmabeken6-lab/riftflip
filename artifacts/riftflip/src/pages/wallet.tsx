@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-const USD_PER_TOKEN = 0.05;
+const USD_PER_TOKEN = 1 / 30;
 
 const SUPPORTED_COINS = [
   { symbol: "BTC", name: "Bitcoin", emoji: "₿", color: "#f7931a" },
@@ -115,7 +115,7 @@ function DepositFlow({ onBack, onDone }: { onBack: () => void; onDone: () => voi
       )}
 
       <div className="mb-4 p-3 rounded-xl flex gap-2" style={{ background: "#0a1a0a", border: "1px solid #1a3a1a" }}>
-        <p className="text-green-600 text-xs">Rate: <strong className="text-green-400">$1 USD = 20 tokens</strong>. Funds auto-credited after blockchain confirmation.</p>
+        <p className="text-green-600 text-xs">Rate: <strong className="text-green-400">$1 USD = 30 tokens</strong>. Funds auto-credited after blockchain confirmation.</p>
       </div>
 
       <AnimatePresence mode="wait">
@@ -251,7 +251,7 @@ function WithdrawFlow({ onBack, balance }: { onBack: () => void; balance: number
       </div>
 
       <div className="mb-4 p-3 rounded-xl flex gap-2" style={{ background: "#0a1a0a", border: "1px solid #1a3a1a" }}>
-        <p className="text-green-600 text-xs">Rate: <strong className="text-green-400">20 tokens = $1 USD</strong></p>
+        <p className="text-green-600 text-xs">Rate: <strong className="text-green-400">30 tokens = $1 USD</strong></p>
       </div>
 
       <AnimatePresence mode="wait">

@@ -8,8 +8,8 @@ const router = Router();
 const NOWPAYMENTS_API_KEY = process.env["NOWPAYMENTS_API_KEY"] ?? "";
 const NOWPAYMENTS_BASE = "https://api.nowpayments.io/v1";
 
-/** $1 USD = 20 tokens */
-const TOKENS_PER_USD = 20;
+/** $1 USD = 30 tokens */
+const TOKENS_PER_USD = 30;
 
 function nowHeaders() {
   return { "x-api-key": NOWPAYMENTS_API_KEY, "Content-Type": "application/json" };

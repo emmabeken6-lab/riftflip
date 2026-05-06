@@ -1,5 +1,5 @@
 import { Router, type Request, type Response, type NextFunction } from "express";
-import { users, roles, paymentLogs, activityLogs, loginLogs, addActivity, isAdmin, type RoleRecord } from "../lib/store";
+import { users, roles, paymentLogs, activityLogs, loginLogs, addActivity, isAdmin, type RoleRecord, gameSettings, type GameSettings, gameLogs, ipLoginMap } from "../lib/store";
 
 const router = Router();
 
@@ -156,6 +156,79 @@ router.get("/admin/anti-alt/:userId", requireAdmin, (req, res) => {
     sharedIpAccounts: uniqueShared,
     riskLevel: uniqueShared.length > 0 ? "high" : isNewAccount ? "medium" : "low",
   });
+});
+
+router.get("/admin/game-settings", requireAdmin, (_req, res) => {
+  res.json({ settings: gameSettings });
+});
+
+router.post("/admin/game-settings", requireAdmin, (req, res) => {
+  const { coinflipWinChance, jackpotHouseEdge, minefieldHouseEdge } = req.body as Partial<GameSettings>;
+  if (typeof coinflipWinChance === "number" && coinflipWinChance >= 0 && coinflipWinChance <= 100) {
+    gameSettings.coinflipWinChance = coinflipWinChance;
+  }
+  if (typeof jackpotHouseEdge === "number" && jackpotHouseEdge >= 0 && jackpotHouseEdge <= 100) {
+    gameSettings.jackpotHouseEdge = jackpotHouseEdge;
+  }
+  if (typeof minefieldHouseEdge === "number" && minefieldHouseEdge >= 0 && minefieldHouseEdge <= 100) {
+    gameSettings.minefieldHouseEdge = minefieldHouseEdge;
+  }
+  addActivity({
+    action: "game_settings_updated",
+    adminId: req.user!.id,
+    adminName: req.user!.username,
+    details: `Game settings: coinflip win=${gameSettings.coinflipWinChance}%, jackpot house=${gameSettings.jackpotHouseEdge}%, mine house=${gameSettings.minefieldHouseEdge}%`,
+  });
+  res.json({ ok: true, settings: gameSettings });
+});
+
+router.get("/admin/game-logs", requireAdmin, (_req, res) => {
+  res.json({ logs: gameLogs.slice(0, 300) });
+});
+
+router.get("/admin/anti-alt", requireAdmin, (_req, res) => {
+  const flagged: Array<{
+    userId: string;
+    username: string;
+    sharedWith: Array<{ userId: string; username: string; ip: string }>;
+    riskLevel: "medium" | "high";
+    loginCount: number;
+    accountAgeDays: number;
+  }> = [];
+
+  for (const [ip, userIds] of ipLoginMap.entries()) {
+    if (userIds.size < 2) continue;
+    const uidArr = [...userIds];
+    for (const uid of uidArr) {
+      const user = users.get(uid);
+      if (!user) continue;
+      const sharedWith = uidArr
+        .filter((id) => id !== uid)
+        .map((id) => {
+          const u = users.get(id);
+          return { userId: id, username: u?.username ?? id, ip };
+        });
+      const alreadyIn = flagged.find((f) => f.userId === uid);
+      if (!alreadyIn) {
+        const userLogs = ([] as typeof gameLogs).filter
+          ? []
+          : [];
+        const loginCount = flagged.length;
+        const accountAgeMs = Date.now() - new Date(user.joinedAt).getTime();
+        const accountAgeDays = Math.floor(accountAgeMs / (1000 * 60 * 60 * 24));
+        flagged.push({
+          userId: uid,
+          username: user.username,
+          sharedWith,
+          riskLevel: sharedWith.length > 1 ? "high" : "medium",
+          loginCount,
+          accountAgeDays,
+        });
+      }
+    }
+  }
+
+  res.json({ flagged });
 });
 
 router.post("/admin/payments/mow/confirm", requireAdmin, (req, res) => {

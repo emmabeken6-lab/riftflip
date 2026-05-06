@@ -13,13 +13,13 @@ const VIP_TIERS = [
 ];
 
 const DAILY_REWARDS = [
-  { day: 1, tokens: 100, xp: 50 },
-  { day: 2, tokens: 200, xp: 100 },
-  { day: 3, tokens: 350, xp: 175 },
-  { day: 4, tokens: 500, xp: 250 },
-  { day: 5, tokens: 750, xp: 375 },
-  { day: 6, tokens: 1200, xp: 600 },
-  { day: 7, tokens: 2500, xp: 1250 },
+  { day: 1, tokens: 0, xp: 20 },
+  { day: 2, tokens: 1, xp: 30 },
+  { day: 3, tokens: 1, xp: 30 },
+  { day: 4, tokens: 2, xp: 50 },
+  { day: 5, tokens: 2, xp: 50 },
+  { day: 6, tokens: 3, xp: 75 },
+  { day: 7, tokens: 4, xp: 100 },
 ];
 
 const TABS = [

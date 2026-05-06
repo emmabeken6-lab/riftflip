@@ -18,7 +18,7 @@ const SESSION_SECRET = process.env["SESSION_SECRET"] ?? "riftflip-session-secret
 
 const domains = (process.env["REPLIT_DOMAINS"] ?? "").split(",").map((d) => d.trim()).filter(Boolean);
 const devDomain = process.env["REPLIT_DEV_DOMAIN"]?.trim();
-const primaryDomain = devDomain ?? domains[0];
+const primaryDomain = domains[0] ?? devDomain;
 const port = process.env["PORT"] ?? "3001";
 
 const callbackURL = primaryDomain

@@ -95,6 +95,23 @@ export interface GiveawayRecord {
   createdAt: string;
 }
 
+export interface GameSettings {
+  coinflipWinChance: number;
+  jackpotHouseEdge: number;
+  minefieldHouseEdge: number;
+}
+
+export interface GameLog {
+  id: string;
+  game: string;
+  userId: string;
+  username: string;
+  bet: number;
+  outcome: "win" | "lose";
+  payout: number;
+  createdAt: string;
+}
+
 export const users = new Map<string, UserRecord>();
 export const roles = new Map<string, RoleRecord>();
 export const paymentLogs: PaymentLog[] = [];
@@ -103,6 +120,29 @@ export const loginLogs: LoginLog[] = [];
 export const tipLogs: TipLog[] = [];
 export const rainEvents: RainEvent[] = [];
 export const giveaways: GiveawayRecord[] = [];
+export const gameLogs: GameLog[] = [];
+
+export const gameSettings: GameSettings = {
+  coinflipWinChance: 50,
+  jackpotHouseEdge: 5,
+  minefieldHouseEdge: 1,
+};
+
+export const ipLoginMap = new Map<string, Set<string>>();
+
+export function recordIpLogin(ip: string, userId: string) {
+  if (!ipLoginMap.has(ip)) ipLoginMap.set(ip, new Set());
+  ipLoginMap.get(ip)!.add(userId);
+}
+
+export function addGameLog(log: Omit<GameLog, "id" | "createdAt">) {
+  gameLogs.unshift({
+    id: `game-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    createdAt: new Date().toISOString(),
+    ...log,
+  });
+  if (gameLogs.length > 1000) gameLogs.splice(1000);
+}
 
 // Seed default roles
 roles.set("member", { id: "member", name: "Member", color: "#6b7280", icon: "👤", permissions: [], createdAt: new Date().toISOString() });

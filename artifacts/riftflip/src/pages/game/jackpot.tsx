@@ -99,7 +99,6 @@ export default function JackpotGame() {
             </button>
           </Link>
           <div className="flex items-center gap-2.5">
-            <span className="text-3xl">🏆</span>
             <div>
               <h1 className="text-white font-black text-xl leading-tight">Jackpot</h1>
               <p className="text-slate-500 text-xs">Round #{round}</p>
