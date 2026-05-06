@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation, Link } from "wouter";
-import { Home, Gamepad2, MessageCircle, Trophy, Coins, Flame, Bomb, LogIn, User } from "lucide-react";
+import { Home, Gamepad2, MessageCircle, Trophy, Coins, Flame, Bomb, Wallet, User } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth, avatarUrl } from "@/contexts/AuthContext";
 
@@ -103,15 +103,20 @@ export default function BottomNav() {
           {tab("/rewards", Trophy, "Rewards", "nav-tab-rewards")}
 
           {isSignedIn && user ? (
-            <Link href="/profile" data-testid="nav-tab-profile" className="flex flex-col items-center gap-1 px-3 py-1 relative" onClick={() => setGamesOpen(false)}>
-              <img
-                src={avatarUrl(user)}
-                alt="Profile"
-                className="w-6 h-6 rounded-full object-cover"
-                style={{ outline: location === "/profile" ? "2px solid #7c3aed" : "none", outlineOffset: "1px" }}
-              />
-              <span className="font-medium truncate" style={{ color: location === "/profile" ? "#a78bfa" : "#4a4a4a", fontSize: "10px" }}>Profile</span>
-              {location === "/profile" && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded-full" style={{ background: "#7c3aed" }} />}
+            <Link href="/wallet" data-testid="nav-tab-wallet" className="flex flex-col items-center gap-1 px-3 py-1 relative" onClick={() => setGamesOpen(false)}>
+              <div className="relative">
+                <img
+                  src={avatarUrl(user)}
+                  alt="Profile"
+                  className="w-6 h-6 rounded-full object-cover"
+                  style={{ outline: location === "/wallet" || location === "/profile" ? "2px solid #7c3aed" : "none", outlineOffset: "1px" }}
+                />
+                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full flex items-center justify-center" style={{ background: "#7c3aed", border: "1px solid #151515" }}>
+                  <Wallet size={7} style={{ color: "#fff" }} />
+                </div>
+              </div>
+              <span className="font-medium truncate" style={{ color: location === "/wallet" || location === "/profile" ? "#a78bfa" : "#4a4a4a", fontSize: "10px" }}>Wallet</span>
+              {(location === "/wallet" || location === "/profile") && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded-full" style={{ background: "#7c3aed" }} />}
             </Link>
           ) : (
             <Link href="/sign-in" data-testid="nav-tab-signin" className="flex flex-col items-center gap-1 px-3 py-1 relative" onClick={() => setGamesOpen(false)}>

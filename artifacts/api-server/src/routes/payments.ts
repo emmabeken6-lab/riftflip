@@ -7,16 +7,21 @@ const router = Router();
 
 const NOWPAYMENTS_API_KEY = process.env["NOWPAYMENTS_API_KEY"] ?? "";
 const NOWPAYMENTS_BASE = "https://api.nowpayments.io/v1";
+const MOWPAYMENTS_API_KEY = process.env["MOWPAYMENTS_API_KEY"] ?? "";
+const MOWPAYMENTS_BASE = "https://api.mowpayments.com/v1";
 
 function nowHeaders() {
-  return {
-    "x-api-key": NOWPAYMENTS_API_KEY,
-    "Content-Type": "application/json",
-  };
+  return { "x-api-key": NOWPAYMENTS_API_KEY, "Content-Type": "application/json" };
+}
+function mowHeaders() {
+  return { "Authorization": `Bearer ${MOWPAYMENTS_API_KEY}`, "Content-Type": "application/json" };
 }
 
 router.get("/payments/status", (_req, res) => {
-  res.json({ configured: !!NOWPAYMENTS_API_KEY });
+  res.json({
+    configured: !!NOWPAYMENTS_API_KEY,
+    mowConfigured: !!MOWPAYMENTS_API_KEY,
+  });
 });
 
 router.get("/payments/currencies", async (_req, res) => {
@@ -118,10 +123,8 @@ router.get("/payments/check/:paymentId", async (req, res) => {
       pay_currency?: string;
       price_amount?: number;
     };
-
     const log = paymentLogs.find((p) => p.id === paymentId);
     if (log && data.payment_status) log.status = data.payment_status;
-
     res.json({
       paymentId: data.payment_id,
       status: data.payment_status,
@@ -133,6 +136,84 @@ router.get("/payments/check/:paymentId", async (req, res) => {
     res.status(502).json({ error: "Failed to check payment" });
   }
 });
+
+/* ── MowPayments (Robux) ── */
+
+router.post("/payments/mow/create", async (req, res) => {
+  if (!req.isAuthenticated?.() || !req.user) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+  const { robuxAmount } = req.body as { robuxAmount?: number };
+  if (!robuxAmount || robuxAmount <= 0) {
+    res.status(400).json({ error: "robuxAmount is required" });
+    return;
+  }
+
+  const orderId = `mow-${req.user.id}-${Date.now()}`;
+
+  if (MOWPAYMENTS_API_KEY) {
+    try {
+      const r = await fetch(`${MOWPAYMENTS_BASE}/payments`, {
+        method: "POST",
+        headers: mowHeaders(),
+        body: JSON.stringify({
+          amount: robuxAmount,
+          currency: "robux",
+          order_id: orderId,
+          description: `Riftflip deposit for ${req.user.username}`,
+        }),
+      });
+      const data = await r.json() as {
+        id?: string;
+        trade_url?: string;
+        status?: string;
+        error?: string;
+      };
+      if (data.error) { res.status(400).json({ error: data.error }); return; }
+      paymentLogs.unshift({
+        id: data.id ?? orderId,
+        userId: req.user.id,
+        username: req.user.username,
+        priceAmount: robuxAmount,
+        payCurrency: "robux",
+        payAmount: robuxAmount,
+        status: data.status ?? "waiting",
+        createdAt: new Date().toISOString(),
+      });
+      res.json({ orderId: data.id ?? orderId, tradeUrl: data.trade_url, robuxAmount, status: data.status ?? "waiting" });
+      return;
+    } catch (err) {
+      logger.error({ err }, "MowPayments create error");
+    }
+  }
+
+  paymentLogs.unshift({
+    id: orderId,
+    userId: req.user.id,
+    username: req.user.username,
+    priceAmount: robuxAmount,
+    payCurrency: "robux",
+    payAmount: robuxAmount,
+    status: "pending_manual",
+    createdAt: new Date().toISOString(),
+  });
+  res.json({
+    orderId,
+    robuxAmount,
+    status: "pending_manual",
+    instructions: `Send R$ ${robuxAmount} Robux via Roblox trade or gamepass. Use order ID: ${orderId} as the trade note. An admin will confirm and credit your balance.`,
+  });
+});
+
+router.get("/payments/mow/check/:orderId", async (req, res) => {
+  const { orderId } = req.params;
+  const log = paymentLogs.find((p) => p.id === orderId);
+  if (!log) { res.status(404).json({ error: "Order not found" }); return; }
+  res.json({ orderId, status: log.status, robuxAmount: log.priceAmount });
+});
+
+/* ── NowPayments IPN ── */
 
 router.post(
   "/payments/ipn",

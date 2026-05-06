@@ -13,9 +13,7 @@ function authBot(req: Parameters<Parameters<IRouter["use"]>[0]>[0], res: Paramet
   next();
 }
 
-const users: Record<string, { username: string; balance: number; banned: boolean; joinedAt: string }> = {
-  demo: { username: "demo", balance: 1000, banned: false, joinedAt: new Date().toISOString() },
-};
+const users: Record<string, { username: string; balance: number; banned: boolean; joinedAt: string }> = {};
 
 const wins: Array<{ username: string; game: string; amount: number; multiplier: number; timestamp: string }> = [];
 

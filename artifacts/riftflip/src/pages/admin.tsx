@@ -5,19 +5,20 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Shield, Users, Star, CreditCard, FileText,
   Ban, Coins, ChevronRight, Search, Plus, Trash2,
-  ArrowLeft, BarChart3, CheckCircle, XCircle, Crown,
-  RefreshCw, Activity, Loader2,
+  BarChart3, CheckCircle, XCircle, Crown,
+  RefreshCw, Activity, Loader2, LogIn, AlertTriangle,
+  Eye, Key,
 } from "lucide-react";
 
-/* ─── Types ───────────────────────────────────────────────────── */
 interface UserRecord { id: string; username: string; avatar: string | null; balance: number; role: string; banned: boolean; banReason?: string; isAdmin: boolean; joinedAt: string; }
 interface RoleRecord { id: string; name: string; color: string; icon: string; permissions: string[]; createdAt: string; }
 interface PaymentLog { id: string; userId: string; username: string; priceAmount: number; payCurrency: string; payAmount: number; status: string; createdAt: string; }
 interface ActivityLog { id: string; action: string; adminId: string; adminName: string; targetId?: string; targetName?: string; details: string; createdAt: string; }
+interface LoginLog { id: string; userId: string; username: string; avatar: string | null; ip: string; userAgent: string; createdAt: string; }
+interface AntiAltResult { userId: string; username: string; accountAgeDays: number; isNewAccount: boolean; loginCount: number; uniqueIps: string[]; sharedIpAccounts: { userId: string; username: string; ip: string }[]; riskLevel: "low" | "medium" | "high"; }
 
-type Section = "overview" | "users" | "roles" | "payments" | "logs";
+type Section = "overview" | "users" | "roles" | "payments" | "logs" | "login-logs" | "anti-alt";
 
-/* ─── Helpers ─────────────────────────────────────────────────── */
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
   finished: { bg: "#0a2a15", text: "#4ade80" },
   waiting: { bg: "#1a1500", text: "#fbbf24" },
@@ -25,6 +26,7 @@ const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
   failed: { bg: "#2a0a0a", text: "#f87171" },
   expired: { bg: "#1a1a1a", text: "#6b7280" },
   partially_paid: { bg: "#1a100a", text: "#fb923c" },
+  pending_manual: { bg: "#1a100a", text: "#fb923c" },
 };
 
 const ACTION_ICONS: Record<string, string> = {
@@ -32,6 +34,11 @@ const ACTION_ICONS: Record<string, string> = {
   make_admin: "🛡️", create_role: "➕", delete_role: "🗑️",
   deposit_confirmed: "💳",
 };
+
+const AVAILABLE_PERMISSIONS = [
+  "vip_perks", "vip_plus_perks", "mvp_perks", "admin",
+  "owner", "chat_mod", "bypass_cooldown", "custom_badge",
+];
 
 function avatarSrc(user: UserRecord): string {
   if (!user.avatar) return `https://api.dicebear.com/9.x/pixel-art/svg?seed=${user.username}`;
@@ -42,7 +49,6 @@ function api<T>(path: string, opts?: RequestInit): Promise<T> {
   return fetch(`/api${path}`, { credentials: "include", ...opts }).then((r) => r.json() as Promise<T>);
 }
 
-/* ─── Stat card ───────────────────────────────────────────────── */
 function StatCard({ label, value, icon: Icon, color }: { label: string; value: string | number; icon: React.ComponentType<{ size?: number; className?: string }>; color: string }) {
   return (
     <div className="p-4 rounded-xl" style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}>
@@ -55,7 +61,6 @@ function StatCard({ label, value, icon: Icon, color }: { label: string; value: s
   );
 }
 
-/* ─── Users section ───────────────────────────────────────────── */
 function UsersSection({ roles }: { roles: RoleRecord[] }) {
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [search, setSearch] = useState("");
@@ -127,7 +132,6 @@ function UsersSection({ roles }: { roles: RoleRecord[] }) {
         </div>
       )}
 
-      {/* User action panel */}
       <AnimatePresence>
         {selected && (
           <>
@@ -148,7 +152,6 @@ function UsersSection({ roles }: { roles: RoleRecord[] }) {
                 </div>
               </div>
 
-              {/* Give Tokens */}
               <p className="text-slate-400 text-xs mb-1">Give Tokens</p>
               <div className="flex gap-2 mb-4">
                 <input type="number" value={tokenAmount} onChange={(e) => setTokenAmount(e.target.value)} placeholder="R$ amount"
@@ -159,7 +162,6 @@ function UsersSection({ roles }: { roles: RoleRecord[] }) {
                 </button>
               </div>
 
-              {/* Set Role */}
               <p className="text-slate-400 text-xs mb-1">Set Role</p>
               <div className="flex flex-wrap gap-2 mb-4">
                 {roles.map((r) => (
@@ -171,7 +173,10 @@ function UsersSection({ roles }: { roles: RoleRecord[] }) {
                 ))}
               </div>
 
-              {/* Action buttons */}
+              <p className="text-slate-400 text-xs mb-1">Ban Reason (optional)</p>
+              <input value={banReason} onChange={(e) => setBanReason(e.target.value)} placeholder="Reason for ban…"
+                className="w-full px-3 py-2 rounded-lg text-white text-sm outline-none mb-3" style={{ background: "#222", border: "1px solid #333" }} />
+
               <div className="grid grid-cols-2 gap-2">
                 {selected.banned ? (
                   <button onClick={() => doAction("unban")} disabled={actionLoading}
@@ -180,7 +185,7 @@ function UsersSection({ roles }: { roles: RoleRecord[] }) {
                     <CheckCircle size={13} /> Unban
                   </button>
                 ) : (
-                  <button onClick={() => { if (banReason || confirm("Ban without reason?")) doAction("ban", { reason: banReason || "Banned by admin" }); }} disabled={actionLoading}
+                  <button onClick={() => doAction("ban", { reason: banReason || "Banned by admin" })} disabled={actionLoading}
                     className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-bold"
                     style={{ background: "#2a0a0a", border: "1px solid #5a1a1a", color: "#f87171" }}>
                     <Ban size={13} /> Ban
@@ -201,13 +206,13 @@ function UsersSection({ roles }: { roles: RoleRecord[] }) {
   );
 }
 
-/* ─── Roles section ───────────────────────────────────────────── */
 function RolesSection() {
   const [roleList, setRoles] = useState<RoleRecord[]>([]);
   const [showCreate, setShowCreate] = useState(false);
   const [name, setName] = useState("");
   const [color, setColor] = useState("#7c3aed");
   const [icon, setIcon] = useState("🎭");
+  const [selectedPerms, setSelectedPerms] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   const EMOJI_PICKS = ["👤", "⭐", "💎", "🏆", "🛡️", "👑", "🎭", "🔥", "⚡", "🌙", "🎯", "🦋", "🐉", "🌟", "💫", "🚀"];
@@ -217,8 +222,8 @@ function RolesSection() {
 
   const create = async () => {
     if (!name || !color || !icon) return;
-    await api("/admin/roles", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, color, icon }) });
-    setShowCreate(false); setName(""); setIcon("🎭");
+    await api("/admin/roles", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, color, icon, permissions: selectedPerms }) });
+    setShowCreate(false); setName(""); setIcon("🎭"); setSelectedPerms([]);
     await load();
   };
 
@@ -227,6 +232,8 @@ function RolesSection() {
     await api(`/admin/roles/${id}`, { method: "DELETE" });
     await load();
   };
+
+  const togglePerm = (p: string) => setSelectedPerms((prev) => prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]);
 
   return (
     <div>
@@ -244,7 +251,11 @@ function RolesSection() {
               <span className="text-2xl">{r.icon}</span>
               <div className="flex-1">
                 <p className="font-bold text-sm" style={{ color: r.color }}>{r.name}</p>
-                <p className="text-slate-600 text-xs">{r.permissions.length > 0 ? r.permissions.join(", ") : "No special permissions"}</p>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {r.permissions.length > 0 ? r.permissions.map((p) => (
+                    <span key={p} className="text-xs px-1.5 py-0.5 rounded font-mono" style={{ background: "#222", color: "#888" }}>{p}</span>
+                  )) : <span className="text-slate-700 text-xs">No special permissions</span>}
+                </div>
               </div>
               <div className="w-4 h-4 rounded-full flex-shrink-0" style={{ background: r.color }} />
               {!["member", "vip", "admin", "owner"].includes(r.id) && (
@@ -262,27 +273,46 @@ function RolesSection() {
           <>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-40" style={{ background: "rgba(0,0,0,0.8)" }} onClick={() => setShowCreate(false)} />
             <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 28, stiffness: 300 }}
-              className="fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl px-5 pt-5 pb-10"
-              style={{ background: "#1a1a1a", borderTop: "1px solid #2a2a2a" }}>
+              className="fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl px-5 pt-5 pb-10 overflow-y-auto"
+              style={{ background: "#1a1a1a", borderTop: "1px solid #2a2a2a", maxHeight: "90vh" }}>
               <div className="w-10 h-1 rounded-full bg-[#333] mx-auto mb-4" />
               <h3 className="text-white font-black text-lg mb-4">Create Role</h3>
+
               <p className="text-slate-400 text-xs mb-1">Name</p>
               <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Role name" className="w-full px-3 py-2.5 rounded-lg text-white text-sm outline-none mb-4" style={{ background: "#222", border: "1px solid #333" }} />
+
               <p className="text-slate-400 text-xs mb-2">Icon</p>
               <div className="flex flex-wrap gap-2 mb-4">
                 {EMOJI_PICKS.map((e) => <button key={e} onClick={() => setIcon(e)} className="w-9 h-9 rounded-lg text-lg flex items-center justify-center transition-all" style={{ background: icon === e ? "#2a1f44" : "#222", border: icon === e ? "1px solid #7c3aed" : "1px solid #2a2a2a" }}>{e}</button>)}
               </div>
+
               <p className="text-slate-400 text-xs mb-2">Color</p>
-              <div className="flex flex-wrap gap-2 mb-5">
+              <div className="flex flex-wrap gap-2 mb-4">
                 {["#ef4444", "#f97316", "#f59e0b", "#22c55e", "#3b82f6", "#8b5cf6", "#ec4899", "#06b6d4", "#7c3aed", "#6b7280"].map((c) => (
                   <button key={c} onClick={() => setColor(c)} className="w-8 h-8 rounded-full transition-all" style={{ background: c, border: color === c ? "2px solid #fff" : "2px solid transparent" }} />
                 ))}
                 <input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="w-8 h-8 rounded-full cursor-pointer border-0" style={{ background: "transparent" }} />
               </div>
+
+              <p className="text-slate-400 text-xs mb-2 flex items-center gap-1.5"><Key size={11} /> Permissions</p>
+              <div className="flex flex-wrap gap-2 mb-4">
+                {AVAILABLE_PERMISSIONS.map((p) => (
+                  <button key={p} onClick={() => togglePerm(p)}
+                    className="px-2.5 py-1 rounded-lg text-xs font-mono font-semibold transition-all"
+                    style={{ background: selectedPerms.includes(p) ? "#2a1f44" : "#222", border: selectedPerms.includes(p) ? "1px solid #7c3aed" : "1px solid #2a2a2a", color: selectedPerms.includes(p) ? "#c4b5fd" : "#555" }}>
+                    {p}
+                  </button>
+                ))}
+              </div>
+
               <div className="flex items-center gap-3 p-3 rounded-lg mb-4" style={{ background: color + "22", border: `1px solid ${color}55` }}>
                 <span className="text-2xl">{icon}</span>
-                <span className="font-bold" style={{ color }}>{name || "Preview"}</span>
+                <div>
+                  <span className="font-bold" style={{ color }}>{name || "Preview"}</span>
+                  {selectedPerms.length > 0 && <p className="text-xs text-slate-500 mt-0.5">{selectedPerms.join(", ")}</p>}
+                </div>
               </div>
+
               <button onClick={() => void create()} disabled={!name} className="w-full py-3 rounded-lg text-white font-bold hover:opacity-90" style={{ background: name ? "#7c3aed" : "#1e1e1e", color: name ? "#fff" : "#444" }}>Create Role</button>
             </motion.div>
           </>
@@ -292,16 +322,54 @@ function RolesSection() {
   );
 }
 
-/* ─── Payments section ────────────────────────────────────────── */
 function PaymentsSection() {
   const [payments, setPayments] = useState<PaymentLog[]>([]);
   const [loading, setLoading] = useState(true);
-  useEffect(() => {
+  const [confirmUserId, setConfirmUserId] = useState("");
+  const [confirmRobux, setConfirmRobux] = useState("");
+  const [confirmTx, setConfirmTx] = useState("");
+  const [confirmMsg, setConfirmMsg] = useState("");
+  const [confirmLoading, setConfirmLoading] = useState(false);
+
+  const load = () => {
     api<{ payments: PaymentLog[] }>("/admin/payments").then((d) => { setPayments(d.payments ?? []); setLoading(false); }).catch(() => setLoading(false));
-  }, []);
+  };
+  useEffect(load, []);
+
+  const confirmMow = async () => {
+    if (!confirmUserId || !confirmRobux || !confirmTx) return;
+    setConfirmLoading(true);
+    try {
+      const r = await api<{ ok?: boolean; newBalance?: number; error?: string }>("/admin/payments/mow/confirm", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: confirmUserId, robuxAmount: Number(confirmRobux), txId: confirmTx }),
+      });
+      setConfirmMsg(r.ok ? `✅ Confirmed! New balance: R$ ${r.newBalance?.toLocaleString()}` : `❌ ${r.error}`);
+      load();
+    } catch { setConfirmMsg("❌ Failed"); }
+    setConfirmLoading(false);
+  };
 
   return (
     <div>
+      <div className="mb-5 p-4 rounded-xl" style={{ background: "#1a0a2a", border: "1px solid #3a1a5a" }}>
+        <p className="text-violet-300 text-sm font-bold mb-3 flex items-center gap-2"><CreditCard size={13} /> Confirm MowPayments Deposit</p>
+        <div className="space-y-2">
+          <input value={confirmUserId} onChange={(e) => setConfirmUserId(e.target.value)} placeholder="User Discord ID"
+            className="w-full px-3 py-2 rounded-lg text-white text-sm outline-none font-mono" style={{ background: "#222", border: "1px solid #333" }} />
+          <input type="number" value={confirmRobux} onChange={(e) => setConfirmRobux(e.target.value)} placeholder="Robux amount"
+            className="w-full px-3 py-2 rounded-lg text-white text-sm outline-none" style={{ background: "#222", border: "1px solid #333" }} />
+          <input value={confirmTx} onChange={(e) => setConfirmTx(e.target.value)} placeholder="Transaction / Order ID"
+            className="w-full px-3 py-2 rounded-lg text-white text-sm outline-none font-mono" style={{ background: "#222", border: "1px solid #333" }} />
+          <button onClick={() => void confirmMow()} disabled={!confirmUserId || !confirmRobux || !confirmTx || confirmLoading}
+            className="w-full py-2.5 rounded-lg text-white text-sm font-bold hover:opacity-90 flex items-center justify-center gap-2"
+            style={{ background: "#7c3aed" }}>
+            {confirmLoading ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle size={13} />} Confirm & Credit
+          </button>
+          {confirmMsg && <p className="text-xs text-center mt-1" style={{ color: confirmMsg.startsWith("✅") ? "#4ade80" : "#f87171" }}>{confirmMsg}</p>}
+        </div>
+      </div>
+
       {loading ? <div className="flex justify-center py-8"><Loader2 size={22} className="animate-spin text-slate-700" /></div> : payments.length === 0 ? (
         <div className="text-center py-12 text-slate-600 text-sm">No payment records yet</div>
       ) : (
@@ -315,10 +383,12 @@ function PaymentsSection() {
                   <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: col.bg, color: col.text }}>{p.status}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <p className="text-slate-400 text-xs">${p.priceAmount} USD → {p.payAmount} {p.payCurrency.toUpperCase()}</p>
+                  <p className="text-slate-400 text-xs">
+                    {p.payCurrency === "robux" ? `R$ ${p.priceAmount.toLocaleString()} Robux` : `$${p.priceAmount} USD → ${p.payAmount} ${p.payCurrency.toUpperCase()}`}
+                  </p>
                   <p className="text-slate-600 text-xs ml-auto">{new Date(p.createdAt).toLocaleDateString()}</p>
                 </div>
-                <p className="text-slate-700 text-xs font-mono mt-1">{p.id}</p>
+                <p className="text-slate-700 text-xs font-mono mt-1 truncate">{p.id}</p>
               </div>
             );
           })}
@@ -328,7 +398,6 @@ function PaymentsSection() {
   );
 }
 
-/* ─── Logs section ────────────────────────────────────────────── */
 function LogsSection() {
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [loading, setLoading] = useState(true);
@@ -358,9 +427,151 @@ function LogsSection() {
   );
 }
 
-/* ─── Overview section ────────────────────────────────────────── */
+function LoginLogsSection() {
+  const [logs, setLogs] = useState<LoginLog[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filterUser, setFilterUser] = useState("");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const d = await api<{ logs: LoginLog[] }>(`/admin/login-logs${filterUser ? `?userId=${encodeURIComponent(filterUser)}` : ""}`);
+    setLogs(d.logs ?? []);
+    setLoading(false);
+  }, [filterUser]);
+
+  useEffect(() => { void load(); }, [load]);
+
+  return (
+    <div>
+      <div className="flex items-center gap-3 mb-4">
+        <div className="flex-1 flex items-center gap-2 px-3 py-2.5 rounded-lg" style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}>
+          <Search size={14} className="text-slate-600" />
+          <input value={filterUser} onChange={(e) => setFilterUser(e.target.value)} placeholder="Filter by Discord ID…" className="flex-1 bg-transparent text-white text-sm outline-none font-mono" />
+        </div>
+        <button onClick={() => void load()} className="p-2.5 rounded-lg hover:bg-[#222]" style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}><RefreshCw size={14} className="text-slate-500" /></button>
+      </div>
+
+      {loading ? <div className="flex justify-center py-8"><Loader2 size={22} className="animate-spin text-slate-700" /></div> : logs.length === 0 ? (
+        <div className="text-center py-12 text-slate-600 text-sm">No login records yet</div>
+      ) : (
+        <div className="space-y-2">
+          {logs.map((log) => (
+            <div key={log.id} className="p-3 rounded-xl" style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}>
+              <div className="flex items-center gap-3 mb-1">
+                <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0" style={{ background: "#222" }}>
+                  {log.avatar
+                    ? <img src={`https://cdn.discordapp.com/avatars/${log.userId}/${log.avatar}.webp?size=32`} alt={log.username} className="w-full h-full object-cover" />
+                    : <div className="w-full h-full flex items-center justify-center text-slate-600 text-xs">{log.username[0]}</div>}
+                </div>
+                <p className="text-white text-sm font-bold">{log.username}</p>
+                <p className="text-slate-600 text-xs ml-auto">{new Date(log.createdAt).toLocaleString()}</p>
+              </div>
+              <p className="text-slate-500 text-xs font-mono">ID: {log.userId}</p>
+              <p className="text-slate-600 text-xs mt-0.5">IP: <span className="text-slate-500">{log.ip}</span></p>
+              <p className="text-slate-700 text-xs mt-0.5 truncate">{log.userAgent}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AntiAltSection() {
+  const [userId, setUserId] = useState("");
+  const [result, setResult] = useState<AntiAltResult | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const check = async () => {
+    if (!userId.trim()) return;
+    setLoading(true); setError(""); setResult(null);
+    try {
+      const d = await api<AntiAltResult & { error?: string }>(`/admin/anti-alt/${userId.trim()}`);
+      if (d.error) { setError(d.error); } else { setResult(d); }
+    } catch { setError("Failed to check"); }
+    setLoading(false);
+  };
+
+  const RISK_COLORS = { low: "#4ade80", medium: "#fbbf24", high: "#f87171" };
+  const RISK_BG = { low: "#0a2a15", medium: "#1a1500", high: "#2a0a0a" };
+
+  return (
+    <div>
+      <div className="mb-4 p-3 rounded-xl flex items-start gap-3" style={{ background: "#1a1200", border: "1px solid #3a2a00" }}>
+        <AlertTriangle size={14} className="text-yellow-500 flex-shrink-0 mt-0.5" />
+        <p className="text-yellow-600 text-xs">Anti-alt checks shared IPs and account age to detect potential alt accounts. Enter a Discord user ID to analyze.</p>
+      </div>
+
+      <div className="flex gap-2 mb-5">
+        <input value={userId} onChange={(e) => setUserId(e.target.value)} onKeyDown={(e) => e.key === "Enter" && void check()} placeholder="Discord User ID…"
+          className="flex-1 px-3 py-2.5 rounded-lg text-white text-sm outline-none font-mono" style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }} />
+        <button onClick={() => void check()} disabled={!userId || loading}
+          className="px-4 py-2.5 rounded-lg text-white text-sm font-bold hover:opacity-90 flex items-center gap-1.5" style={{ background: "#7c3aed" }}>
+          {loading ? <Loader2 size={13} className="animate-spin" /> : <Eye size={13} />} Check
+        </button>
+      </div>
+
+      {error && <div className="p-3 rounded-xl text-red-400 text-sm text-center" style={{ background: "#1a0a0a", border: "1px solid #3a1a1a" }}>{error}</div>}
+
+      {result && (
+        <div className="space-y-3">
+          <div className="p-4 rounded-xl flex items-center gap-4" style={{ background: RISK_BG[result.riskLevel], border: `1px solid ${RISK_COLORS[result.riskLevel]}44` }}>
+            <div>
+              <p className="text-white font-black text-lg">{result.username}</p>
+              <p className="text-slate-500 text-xs font-mono">{result.userId}</p>
+            </div>
+            <div className="ml-auto text-right">
+              <p className="font-black text-2xl" style={{ color: RISK_COLORS[result.riskLevel] }}>{result.riskLevel.toUpperCase()}</p>
+              <p className="text-slate-500 text-xs">Risk Level</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            <div className="p-3 rounded-xl text-center" style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}>
+              <p className="text-white font-black text-xl">{result.accountAgeDays}</p>
+              <p className="text-slate-600 text-xs">Days Old</p>
+              {result.isNewAccount && <p className="text-yellow-500 text-xs mt-0.5">⚠ New</p>}
+            </div>
+            <div className="p-3 rounded-xl text-center" style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}>
+              <p className="text-white font-black text-xl">{result.loginCount}</p>
+              <p className="text-slate-600 text-xs">Logins</p>
+            </div>
+            <div className="p-3 rounded-xl text-center" style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}>
+              <p className="text-white font-black text-xl">{result.uniqueIps.length}</p>
+              <p className="text-slate-600 text-xs">Unique IPs</p>
+            </div>
+          </div>
+
+          {result.uniqueIps.length > 0 && (
+            <div className="p-3 rounded-xl" style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}>
+              <p className="text-slate-400 text-xs font-semibold mb-2">Known IPs</p>
+              {result.uniqueIps.map((ip) => <p key={ip} className="text-slate-500 text-xs font-mono">{ip}</p>)}
+            </div>
+          )}
+
+          {result.sharedIpAccounts.length > 0 && (
+            <div className="p-3 rounded-xl" style={{ background: "#2a0a0a", border: "1px solid #5a1a1a" }}>
+              <p className="text-red-400 text-xs font-semibold mb-2">⚠ Shared IP Accounts (potential alts)</p>
+              {result.sharedIpAccounts.map((u) => (
+                <div key={u.userId} className="flex items-center justify-between py-1.5 border-b last:border-0" style={{ borderColor: "#2a2a2a" }}>
+                  <div>
+                    <p className="text-white text-sm font-semibold">{u.username}</p>
+                    <p className="text-slate-600 text-xs font-mono">{u.userId}</p>
+                  </div>
+                  <p className="text-slate-500 text-xs font-mono">{u.ip}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function OverviewSection() {
-  const [stats, setStats] = useState<{ totalUsers: number; totalBanned: number; totalBalance: number; totalPayments: number; totalVolume: number } | null>(null);
+  const [stats, setStats] = useState<{ totalUsers: number; totalBanned: number; totalBalance: number; totalPayments: number; totalVolume: number; totalLogins: number } | null>(null);
   useEffect(() => { api<typeof stats>("/admin/stats").then(setStats).catch(() => {}); }, []);
 
   return (
@@ -369,7 +580,7 @@ function OverviewSection() {
         <StatCard label="Total Users" value={stats?.totalUsers ?? 0} icon={Users} color="text-violet-400" />
         <StatCard label="Banned" value={stats?.totalBanned ?? 0} icon={Ban} color="text-red-400" />
         <StatCard label="Total Balance" value={`R$ ${(stats?.totalBalance ?? 0).toLocaleString()}`} icon={Coins} color="text-yellow-400" />
-        <StatCard label="Payments" value={stats?.totalPayments ?? 0} icon={CreditCard} color="text-blue-400" />
+        <StatCard label="Total Logins" value={stats?.totalLogins ?? 0} icon={LogIn} color="text-blue-400" />
       </div>
       <div className="p-4 rounded-xl" style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}>
         <p className="text-slate-500 text-xs mb-1 flex items-center gap-1"><BarChart3 size={12} /> Total Volume</p>
@@ -380,22 +591,22 @@ function OverviewSection() {
           <CheckCircle size={13} className="text-green-500" />
           <p className="text-green-500 text-xs font-bold">All systems operational</p>
         </div>
-        <p className="text-slate-600 text-xs">NowPayments · IPN webhook · Provably Fair · Discord OAuth</p>
+        <p className="text-slate-600 text-xs">MowPayments · NowPayments · IPN · Provably Fair · Discord OAuth</p>
       </div>
     </div>
   );
 }
 
-/* ─── Nav items ───────────────────────────────────────────────── */
 const NAV: { key: Section; label: string; icon: React.ComponentType<{ size?: number; className?: string }> }[] = [
   { key: "overview", label: "Overview", icon: BarChart3 },
   { key: "users", label: "Users", icon: Users },
   { key: "roles", label: "Roles", icon: Star },
   { key: "payments", label: "Payments", icon: CreditCard },
   { key: "logs", label: "Logs", icon: Activity },
+  { key: "login-logs", label: "Login Logs", icon: LogIn },
+  { key: "anti-alt", label: "Anti-Alt", icon: Shield },
 ];
 
-/* ─── Main admin page ─────────────────────────────────────────── */
 export default function AdminPanel() {
   const { user, isSignedIn, isLoading } = useAuth();
   const [section, setSection] = useState<Section>("overview");
@@ -411,56 +622,65 @@ export default function AdminPanel() {
     <div className="flex flex-col items-center justify-center min-h-screen gap-4" style={{ background: "#111" }}>
       <Shield size={40} className="text-slate-700" />
       <p className="text-white font-bold">Sign in to access admin</p>
-      <Link href="/sign-in"><button className="px-6 py-2.5 rounded-lg text-white font-bold" style={{ background: "#7c3aed" }}>Sign In</button></Link>
+      <Link href="/sign-in"><button className="px-6 py-3 rounded-lg text-white font-bold" style={{ background: "#5865F2" }}>Sign In with Discord</button></Link>
     </div>
   );
 
+  const isUserAdmin = user.id === "1456385131630563498" || user.isAdmin;
+
+  if (!isUserAdmin) return (
+    <div className="flex flex-col items-center justify-center min-h-screen gap-4 px-6 text-center" style={{ background: "#111" }}>
+      <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: "#1a0a0a", border: "1px solid #3a1a1a" }}>
+        <XCircle size={32} className="text-red-500" />
+      </div>
+      <p className="text-white font-black text-xl">Access Denied</p>
+      <p className="text-slate-500 text-sm">You don't have admin privileges.</p>
+      <Link href="/"><button className="px-6 py-2.5 rounded-lg text-white font-bold text-sm" style={{ background: "#222", border: "1px solid #333" }}>← Go Home</button></Link>
+    </div>
+  );
+
+  const sectionTitle = NAV.find((n) => n.key === section)?.label ?? "Admin";
+
   return (
     <div className="min-h-screen" style={{ background: "#111" }}>
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-4" style={{ borderBottom: "1px solid #222" }}>
-        <div className="flex items-center gap-3">
-          <Link href="/"><button className="w-9 h-9 rounded-lg flex items-center justify-center hover:bg-[#222]" style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}><ArrowLeft size={16} className="text-slate-400" /></button></Link>
-          <div>
-            <div className="flex items-center gap-2">
-              <Shield size={16} className="text-red-400" />
-              <h1 className="text-white font-black text-lg">Admin Panel</h1>
-            </div>
-            <p className="text-slate-600 text-xs">Riftflip Management</p>
-          </div>
-        </div>
+      <div className="px-4 pt-4 pb-3 flex items-center gap-3" style={{ borderBottom: "1px solid #1e1e1e" }}>
+        <Link href="/profile">
+          <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#1e1e1e]" style={{ border: "1px solid #222" }}>
+            <ChevronRight size={15} className="text-slate-500 rotate-180" />
+          </button>
+        </Link>
         <div className="flex items-center gap-2">
-          <img src={avatarUrl(user)} alt={user.username} className="w-8 h-8 rounded-full" style={{ border: "2px solid #7c3aed" }} />
-          <div className="text-right hidden sm:block">
-            <p className="text-white text-sm font-bold">{user.username}</p>
-            <p className="text-red-400 text-xs flex items-center gap-0.5 justify-end"><Crown size={9} /> Owner</p>
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "#ef444422" }}>
+            <Shield size={14} className="text-red-400" />
           </div>
+          <h1 className="text-white font-black text-lg">Admin Panel</h1>
+        </div>
+        <div className="ml-auto flex items-center gap-2">
+          <img src={avatarUrl(user)} alt={user.username} className="w-7 h-7 rounded-full" />
+          <Crown size={12} className="text-yellow-500" />
         </div>
       </div>
 
-      {/* Nav tabs */}
-      <div className="flex gap-1 px-4 pt-4 overflow-x-auto pb-1">
-        {NAV.map(({ key, label, icon: Icon }) => (
-          <button key={key} onClick={() => setSection(key)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-colors"
-            style={{ background: section === key ? "#1e1e1e" : "#161616", border: section === key ? "1px solid #444" : "1px solid #2a2a2a", color: section === key ? "#c4b5fd" : "#555" }}>
-            <Icon size={12} />
-            {label}
+      <div className="flex gap-1 px-3 py-2 overflow-x-auto" style={{ borderBottom: "1px solid #1e1e1e" }}>
+        {NAV.map((n) => (
+          <button key={n.key} onClick={() => setSection(n.key)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors flex-shrink-0"
+            style={{ background: section === n.key ? "#2a1f44" : "transparent", color: section === n.key ? "#c4b5fd" : "#555", border: section === n.key ? "1px solid #4a2a7a" : "1px solid transparent" }}>
+            <n.icon size={11} />
+            {n.label}
           </button>
         ))}
       </div>
 
-      {/* Content */}
-      <div className="px-4 pt-4 pb-24">
-        <AnimatePresence mode="wait">
-          <motion.div key={section} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
-            {section === "overview" && <OverviewSection />}
-            {section === "users" && <UsersSection roles={roles} />}
-            {section === "roles" && <RolesSection />}
-            {section === "payments" && <PaymentsSection />}
-            {section === "logs" && <LogsSection />}
-          </motion.div>
-        </AnimatePresence>
+      <div className="px-4 py-4">
+        <h2 className="text-white font-bold mb-4">{sectionTitle}</h2>
+        {section === "overview" && <OverviewSection />}
+        {section === "users" && <UsersSection roles={roles} />}
+        {section === "roles" && <RolesSection />}
+        {section === "payments" && <PaymentsSection />}
+        {section === "logs" && <LogsSection />}
+        {section === "login-logs" && <LoginLogsSection />}
+        {section === "anti-alt" && <AntiAltSection />}
       </div>
     </div>
   );

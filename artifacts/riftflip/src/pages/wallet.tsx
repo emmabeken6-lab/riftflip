@@ -28,6 +28,14 @@ interface PaymentData {
   status: string;
 }
 
+interface MowPaymentData {
+  orderId: string;
+  robuxAmount: number;
+  status: string;
+  tradeUrl?: string;
+  instructions?: string;
+}
+
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
   const copy = () => {
@@ -44,7 +52,144 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
-function DepositFlow({ onBack }: { onBack: () => void }) {
+function MowDepositFlow({ onBack }: { onBack: () => void }) {
+  const [step, setStep] = useState<"amount" | "confirm">("amount");
+  const [robuxAmount, setRobuxAmount] = useState("");
+  const [payment, setPayment] = useState<MowPaymentData | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [checkStatus, setCheckStatus] = useState<string | null>(null);
+
+  const createPayment = async () => {
+    if (!robuxAmount || !Number(robuxAmount)) return;
+    setLoading(true); setError("");
+    try {
+      const r = await fetch("/api/payments/mow/create", {
+        method: "POST", credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ robuxAmount: Number(robuxAmount) }),
+      });
+      const d = await r.json() as MowPaymentData & { error?: string };
+      if (d.error) throw new Error(d.error);
+      setPayment(d);
+      setStep("confirm");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to create order");
+    }
+    setLoading(false);
+  };
+
+  const checkOrder = async () => {
+    if (!payment) return;
+    try {
+      const r = await fetch(`/api/payments/mow/check/${payment.orderId}`, { credentials: "include" });
+      const d = await r.json() as { status?: string };
+      setCheckStatus(d.status ?? "unknown");
+    } catch { setCheckStatus("error"); }
+  };
+
+  return (
+    <div>
+      <div className="flex items-center gap-3 mb-5">
+        <button onClick={onBack} className="text-slate-500 hover:text-slate-300 transition-colors text-sm">← Back</button>
+        <h2 className="text-white font-black text-lg">Robux Deposit</h2>
+        <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: "#1a0a2a", border: "1px solid #5a2a8a", color: "#c4b5fd" }}>MowPayments</span>
+      </div>
+
+      <AnimatePresence mode="wait">
+        {step === "amount" && (
+          <motion.div key="amount" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }}>
+            <p className="text-slate-400 text-sm mb-2">How many Robux to deposit?</p>
+            <div className="flex items-center gap-3 px-4 py-3 rounded-lg mb-3" style={{ background: "#222", border: "1px solid #333" }}>
+              <span className="text-violet-400 font-bold text-lg">R$</span>
+              <input type="number" value={robuxAmount} onChange={(e) => setRobuxAmount(e.target.value)}
+                placeholder="0" className="flex-1 bg-transparent text-white text-xl font-bold outline-none" />
+            </div>
+            <div className="grid grid-cols-3 gap-2 mb-4">
+              {ROBUX_AMOUNTS.map((amt) => (
+                <button key={amt} onClick={() => setRobuxAmount(String(amt))}
+                  className="py-2 rounded-lg text-xs font-bold"
+                  style={{ background: robuxAmount === String(amt) ? "#2a1f44" : "#222", border: robuxAmount === String(amt) ? "1px solid #7c3aed" : "1px solid #2a2a2a", color: robuxAmount === String(amt) ? "#c4b5fd" : "#555" }}>
+                  R${amt >= 1000 ? `${amt / 1000}K` : amt}
+                </button>
+              ))}
+            </div>
+            {error && <p className="text-red-400 text-sm mb-3 text-center">{error}</p>}
+            <button onClick={createPayment} disabled={!robuxAmount || !Number(robuxAmount) || loading}
+              className="w-full py-3 rounded-lg text-white font-bold hover:opacity-90 flex items-center justify-center gap-2"
+              style={{ background: robuxAmount ? "#7c3aed" : "#1e1e1e", color: robuxAmount ? "#fff" : "#444" }}>
+              {loading ? <><Loader2 size={15} className="animate-spin" /> Creating order…</> : "Continue →"}
+            </button>
+          </motion.div>
+        )}
+
+        {step === "confirm" && payment && (
+          <motion.div key="confirm" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }}>
+            <div className="p-4 rounded-xl mb-4 text-center" style={{ background: "#0a1f14", border: "1px solid #1a5a2a" }}>
+              <p className="text-green-400 font-bold text-sm mb-1">Order created!</p>
+              <p className="text-slate-500 text-xs">Follow the instructions below to complete your deposit</p>
+            </div>
+
+            <div className="p-4 rounded-xl mb-3" style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}>
+              <p className="text-slate-500 text-xs mb-1">Amount to send</p>
+              <p className="text-white font-black text-3xl mb-3">R$ <span style={{ color: "#c4b5fd" }}>{Number(payment.robuxAmount).toLocaleString()}</span></p>
+
+              <p className="text-slate-500 text-xs mb-1">Order ID (include in trade note)</p>
+              <div className="flex items-center gap-2 p-3 rounded-lg mb-3" style={{ background: "#222", border: "1px solid #333" }}>
+                <code className="text-violet-300 text-xs font-mono flex-1 break-all">{payment.orderId}</code>
+                <CopyButton text={payment.orderId} />
+              </div>
+
+              {payment.tradeUrl && (
+                <>
+                  <p className="text-slate-500 text-xs mb-1">Trade Link</p>
+                  <a href={payment.tradeUrl} target="_blank" rel="noreferrer"
+                    className="flex items-center gap-2 p-3 rounded-lg mb-3 hover:opacity-80 transition-opacity"
+                    style={{ background: "#222", border: "1px solid #333" }}>
+                    <ExternalLink size={13} className="text-violet-400" />
+                    <span className="text-violet-300 text-xs font-mono flex-1 truncate">{payment.tradeUrl}</span>
+                  </a>
+                </>
+              )}
+
+              {payment.instructions && (
+                <div className="p-3 rounded-lg" style={{ background: "#111", border: "1px solid #222" }}>
+                  <p className="text-slate-400 text-xs leading-relaxed">{payment.instructions}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-2 mb-3">
+              <button onClick={checkOrder}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold hover:opacity-90"
+                style={{ background: "#1e1e1e", border: "1px solid #333", color: "#888" }}>
+                <RefreshCw size={13} /> Check Status
+              </button>
+            </div>
+
+            {checkStatus && (
+              <div className="p-3 rounded-lg mb-3 text-center" style={{
+                background: checkStatus === "finished" ? "#0a1f14" : "#1a1a1a",
+                border: checkStatus === "finished" ? "1px solid #1a5a2a" : "1px solid #222",
+              }}>
+                <p className="text-sm font-semibold" style={{ color: checkStatus === "finished" ? "#4ade80" : "#888" }}>
+                  Status: {checkStatus}
+                </p>
+              </div>
+            )}
+
+            <p className="text-slate-700 text-xs text-center leading-relaxed">
+              After sending, an admin will verify and credit your balance.
+              Keep your Order ID safe as proof of payment.
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function CryptoDepositFlow({ onBack }: { onBack: () => void }) {
   const [step, setStep] = useState<"amount" | "coin" | "address">("amount");
   const [robuxAmount, setRobuxAmount] = useState("");
   const [selectedCoin, setSelectedCoin] = useState<typeof SUPPORTED_COINS[0] | null>(null);
@@ -63,8 +208,7 @@ function DepositFlow({ onBack }: { onBack: () => void }) {
 
   const createPayment = async () => {
     if (!selectedCoin || !robuxAmount) return;
-    setLoading(true);
-    setError("");
+    setLoading(true); setError("");
     const usdAmount = Math.max(1, Math.round(Number(robuxAmount) * ROBUX_TO_USD * 100) / 100);
     try {
       const r = await fetch("/api/payments/create", {
@@ -78,9 +222,8 @@ function DepositFlow({ onBack }: { onBack: () => void }) {
       setStep("address");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to create payment");
-    } finally {
-      setLoading(false);
     }
+    setLoading(false);
   };
 
   const checkPayment = async () => {
@@ -89,9 +232,7 @@ function DepositFlow({ onBack }: { onBack: () => void }) {
       const r = await fetch(`/api/payments/check/${payment.paymentId}`, { credentials: "include" });
       const d = await r.json() as { status?: string };
       setCheckStatus(d.status ?? "unknown");
-    } catch {
-      setCheckStatus("error");
-    }
+    } catch { setCheckStatus("error"); }
   };
 
   const usdValue = robuxAmount ? (Number(robuxAmount) * ROBUX_TO_USD).toFixed(2) : "0.00";
@@ -101,6 +242,7 @@ function DepositFlow({ onBack }: { onBack: () => void }) {
       <div className="flex items-center gap-3 mb-5">
         <button onClick={onBack} className="text-slate-500 hover:text-slate-300 transition-colors text-sm">← Back</button>
         <h2 className="text-white font-black text-lg">Crypto Deposit</h2>
+        <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: "#0a1a2a", border: "1px solid #1a3a5a", color: "#60a5fa" }}>NowPayments</span>
       </div>
 
       {configured === false && (
@@ -114,7 +256,6 @@ function DepositFlow({ onBack }: { onBack: () => void }) {
       )}
 
       <AnimatePresence mode="wait">
-        {/* Step 1: Amount */}
         {step === "amount" && (
           <motion.div key="amount" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }}>
             <p className="text-slate-400 text-sm mb-2">How many Robux to deposit?</p>
@@ -132,9 +273,7 @@ function DepositFlow({ onBack }: { onBack: () => void }) {
                 </button>
               ))}
             </div>
-            {robuxAmount && (
-              <p className="text-slate-600 text-xs text-center mb-4">≈ ${usdValue} USD at current rate</p>
-            )}
+            {robuxAmount && <p className="text-slate-600 text-xs text-center mb-4">≈ ${usdValue} USD at current rate</p>}
             <button onClick={() => setStep("coin")} disabled={!robuxAmount || !Number(robuxAmount)}
               className="w-full py-3 rounded-lg text-white font-bold hover:opacity-90"
               style={{ background: robuxAmount ? "#7c3aed" : "#1e1e1e", color: robuxAmount ? "#fff" : "#444" }}>
@@ -143,7 +282,6 @@ function DepositFlow({ onBack }: { onBack: () => void }) {
           </motion.div>
         )}
 
-        {/* Step 2: Coin picker */}
         {step === "coin" && (
           <motion.div key="coin" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }}>
             <p className="text-slate-400 text-sm mb-3">Choose payment currency</p>
@@ -151,10 +289,7 @@ function DepositFlow({ onBack }: { onBack: () => void }) {
               {SUPPORTED_COINS.map((coin) => (
                 <button key={coin.symbol} onClick={() => setSelectedCoin(coin)}
                   className="flex items-center gap-3 p-3 rounded-xl transition-all"
-                  style={{
-                    background: selectedCoin?.symbol === coin.symbol ? "#1e1530" : "#1a1a1a",
-                    border: selectedCoin?.symbol === coin.symbol ? "1px solid #7c3aed" : "1px solid #222",
-                  }}>
+                  style={{ background: selectedCoin?.symbol === coin.symbol ? "#1e1530" : "#1a1a1a", border: selectedCoin?.symbol === coin.symbol ? "1px solid #7c3aed" : "1px solid #222" }}>
                   <span className="text-2xl font-black" style={{ color: coin.color }}>{coin.emoji}</span>
                   <div className="text-left">
                     <p className="text-white font-bold text-sm">{coin.symbol}</p>
@@ -172,21 +307,18 @@ function DepositFlow({ onBack }: { onBack: () => void }) {
           </motion.div>
         )}
 
-        {/* Step 3: Address */}
         {step === "address" && payment && (
           <motion.div key="address" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }}>
             <div className="p-4 rounded-xl mb-4 text-center" style={{ background: "#0a1f14", border: "1px solid #1a5a2a" }}>
               <p className="text-green-400 font-bold text-sm mb-1">Payment address generated!</p>
               <p className="text-slate-500 text-xs">Send exactly the amount shown to this address</p>
             </div>
-
             <div className="p-4 rounded-xl mb-3" style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}>
               <p className="text-slate-500 text-xs mb-1">Send exactly</p>
               <div className="flex items-center justify-between mb-3">
                 <p className="text-white font-black text-2xl">{payment.payAmount} <span className="text-slate-400 text-lg font-bold">{payment.payCurrency.toUpperCase()}</span></p>
                 <CopyButton text={String(payment.payAmount)} />
               </div>
-
               <p className="text-slate-500 text-xs mb-1">To this address</p>
               <div className="flex items-start gap-2 p-3 rounded-lg mb-1" style={{ background: "#222", border: "1px solid #333" }}>
                 <code className="text-violet-300 text-xs font-mono break-all flex-1">{payment.payAddress}</code>
@@ -194,35 +326,24 @@ function DepositFlow({ onBack }: { onBack: () => void }) {
               </div>
               <p className="text-slate-700 text-xs">Payment ID: {payment.paymentId}</p>
             </div>
-
             <div className="flex gap-2 mb-4">
               <button onClick={checkPayment}
                 className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold hover:opacity-90"
                 style={{ background: "#1e1e1e", border: "1px solid #333", color: "#888" }}>
                 <RefreshCw size={13} /> Check Status
               </button>
-              <a href={`https://nowpayments.io`} target="_blank" rel="noreferrer"
+              <a href="https://nowpayments.io" target="_blank" rel="noreferrer"
                 className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold hover:opacity-90"
                 style={{ background: "#1e1e1e", border: "1px solid #333", color: "#888" }}>
-                <ExternalLink size={13} /> Track Payment
+                <ExternalLink size={13} /> Track
               </a>
             </div>
-
             {checkStatus && (
-              <div className="p-3 rounded-lg mb-3 text-center" style={{
-                background: checkStatus === "finished" ? "#0a1f14" : "#1a1a1a",
-                border: checkStatus === "finished" ? "1px solid #1a5a2a" : "1px solid #222",
-              }}>
-                <p className="text-sm font-semibold" style={{ color: checkStatus === "finished" ? "#4ade80" : "#888" }}>
-                  Status: {checkStatus}
-                </p>
+              <div className="p-3 rounded-lg mb-3 text-center" style={{ background: checkStatus === "finished" ? "#0a1f14" : "#1a1a1a", border: checkStatus === "finished" ? "1px solid #1a5a2a" : "1px solid #222" }}>
+                <p className="text-sm font-semibold" style={{ color: checkStatus === "finished" ? "#4ade80" : "#888" }}>Status: {checkStatus}</p>
               </div>
             )}
-
-            <p className="text-slate-700 text-xs text-center leading-relaxed">
-              Funds are credited automatically after blockchain confirmation.
-              Minimum 1 confirmation required. Do not close this page until sent.
-            </p>
+            <p className="text-slate-700 text-xs text-center leading-relaxed">Funds are credited automatically after blockchain confirmation.</p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -230,8 +351,44 @@ function DepositFlow({ onBack }: { onBack: () => void }) {
   );
 }
 
+type DepositMethod = "mow" | "crypto";
+
+function DepositSelector({ onSelect }: { onSelect: (m: DepositMethod) => void }) {
+  return (
+    <div>
+      <p className="text-slate-400 text-sm mb-4">Choose deposit method</p>
+      <div className="space-y-3">
+        <button onClick={() => onSelect("mow")}
+          className="w-full flex items-center gap-4 p-4 rounded-xl text-left hover:bg-[#1e1e1e] transition-colors"
+          style={{ background: "#1a1a1a", border: "1px solid #3a1a5a" }}>
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0" style={{ background: "#2a1f44" }}>
+            R$
+          </div>
+          <div className="flex-1">
+            <p className="text-white font-bold">Robux (MowPayments)</p>
+            <p className="text-slate-500 text-xs mt-0.5">Pay directly with Robux via Roblox trade</p>
+          </div>
+          <span className="text-xs px-2 py-0.5 rounded-full font-bold" style={{ background: "#2a1f44", color: "#c4b5fd" }}>Recommended</span>
+        </button>
+
+        <button onClick={() => onSelect("crypto")}
+          className="w-full flex items-center gap-4 p-4 rounded-xl text-left hover:bg-[#1e1e1e] transition-colors"
+          style={{ background: "#1a1a1a", border: "1px solid #1a2a3a" }}>
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "#0a1a2a" }}>
+            <span className="text-lg">₿</span>
+          </div>
+          <div className="flex-1">
+            <p className="text-white font-bold">Crypto (NowPayments)</p>
+            <p className="text-slate-500 text-xs mt-0.5">BTC, ETH, LTC, USDT, SOL, BNB</p>
+          </div>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function Wallet() {
-  const [view, setView] = useState<"main" | "deposit" | "withdraw">("main");
+  const [view, setView] = useState<"main" | "deposit" | "deposit-mow" | "deposit-crypto" | "withdraw">("main");
   const [robuxAmount, setRobuxAmount] = useState("");
   const { isSignedIn, isLoading, user } = useAuth();
 
@@ -257,11 +414,8 @@ export default function Wallet() {
         </div>
       )}
 
-      {/* Balance card */}
       <section className="mb-5 p-5 rounded-xl" style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}>
-        {isSignedIn && user && (
-          <p className="text-slate-500 text-xs mb-1">{user.username}</p>
-        )}
+        {isSignedIn && user && <p className="text-slate-500 text-xs mb-1">{user.username}</p>}
         <p className="text-slate-500 text-sm">Available Balance</p>
         <p className="text-4xl font-black mb-4" style={{ color: isSignedIn ? "#fff" : "#333" }}>
           R$ {isSignedIn && user ? user.balance.toLocaleString() : "0"}
@@ -271,7 +425,7 @@ export default function Wallet() {
             className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-white font-bold text-sm hover:opacity-90"
             style={{ background: isSignedIn ? "#7c3aed" : "#1e1e1e", color: isSignedIn ? "#fff" : "#333", cursor: isSignedIn ? "pointer" : "not-allowed" }}>
             <ArrowDownLeft size={15} />
-            Deposit Crypto
+            Deposit
           </button>
           <button onClick={() => setView("withdraw")} disabled={!isSignedIn}
             className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm hover:bg-[#222]"
@@ -282,13 +436,32 @@ export default function Wallet() {
         </div>
       </section>
 
-      {/* Main / Deposit / Withdraw views */}
       <AnimatePresence mode="wait">
         {view === "deposit" && (
-          <motion.section key="deposit"
+          <motion.section key="deposit-select"
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
             className="mb-5 p-5 rounded-xl" style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}>
-            <DepositFlow onBack={() => setView("main")} />
+            <div className="flex items-center gap-3 mb-5">
+              <button onClick={() => setView("main")} className="text-slate-500 hover:text-slate-300 transition-colors text-sm">← Back</button>
+              <h2 className="text-white font-black text-lg">Deposit</h2>
+            </div>
+            <DepositSelector onSelect={(m) => setView(m === "mow" ? "deposit-mow" : "deposit-crypto")} />
+          </motion.section>
+        )}
+
+        {view === "deposit-mow" && (
+          <motion.section key="deposit-mow"
+            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+            className="mb-5 p-5 rounded-xl" style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}>
+            <MowDepositFlow onBack={() => setView("deposit")} />
+          </motion.section>
+        )}
+
+        {view === "deposit-crypto" && (
+          <motion.section key="deposit-crypto"
+            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+            className="mb-5 p-5 rounded-xl" style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}>
+            <CryptoDepositFlow onBack={() => setView("deposit")} />
           </motion.section>
         )}
 
@@ -300,7 +473,6 @@ export default function Wallet() {
               <button onClick={() => setView("main")} className="text-slate-500 hover:text-slate-300 text-sm">← Back</button>
               <h2 className="text-white font-black text-lg">Withdraw</h2>
             </div>
-
             <p className="text-slate-400 text-sm mb-2">Amount (R$)</p>
             <div className="flex items-center gap-3 px-4 py-3 rounded-lg mb-3" style={{ background: "#222", border: "1px solid #333" }}>
               <span className="text-violet-400 font-bold text-lg">R$</span>
@@ -316,12 +488,10 @@ export default function Wallet() {
                 </button>
               ))}
             </div>
-
             <p className="text-slate-400 text-sm mb-2">Withdraw to (crypto address)</p>
             <input type="text" placeholder="Your BTC / ETH / LTC address"
               className="w-full px-4 py-3 rounded-lg font-mono text-sm outline-none mb-5"
               style={{ background: "#222", border: "1px solid #333", color: "#e5e5e5" }} />
-
             <p className="text-slate-400 text-sm mb-2">Currency</p>
             <div className="grid grid-cols-3 gap-2 mb-5">
               {SUPPORTED_COINS.slice(0, 3).map((coin) => (
@@ -332,7 +502,6 @@ export default function Wallet() {
                 </button>
               ))}
             </div>
-
             <button disabled={!robuxAmount}
               className="w-full py-3 rounded-lg text-white font-bold hover:opacity-90"
               style={{ background: robuxAmount ? "#7c3aed" : "#1e1e1e", color: robuxAmount ? "#fff" : "#444" }}>
@@ -343,7 +512,6 @@ export default function Wallet() {
 
         {view === "main" && (
           <motion.div key="main" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            {/* Stats */}
             <section className="grid grid-cols-3 gap-3 mb-5">
               {[
                 { label: "Deposited", value: "R$ 0", icon: ArrowDownLeft },
@@ -358,21 +526,29 @@ export default function Wallet() {
               ))}
             </section>
 
-            {/* Supported coins */}
             <section className="mb-5 p-5 rounded-xl" style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}>
-              <h2 className="text-white font-bold text-sm mb-3">Accepted Currencies</h2>
-              <div className="flex flex-wrap gap-2">
-                {SUPPORTED_COINS.map((coin) => (
-                  <div key={coin.symbol} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg" style={{ background: "#222", border: "1px solid #2a2a2a" }}>
-                    <span className="font-black text-sm" style={{ color: coin.color }}>{coin.emoji}</span>
-                    <span className="text-slate-400 text-xs font-semibold">{coin.symbol}</span>
+              <h2 className="text-white font-bold text-sm mb-3">Accepted Payment Methods</h2>
+              <div className="space-y-2">
+                <div className="flex items-center gap-3 p-3 rounded-lg" style={{ background: "#222", border: "1px solid #2a2a2a" }}>
+                  <span className="text-violet-400 font-black text-sm w-8 text-center">R$</span>
+                  <div>
+                    <p className="text-white text-sm font-bold">Robux via MowPayments</p>
+                    <p className="text-slate-600 text-xs">Direct Roblox trade · Admin-verified</p>
                   </div>
-                ))}
+                  <span className="ml-auto text-xs px-2 py-0.5 rounded-full font-bold" style={{ background: "#2a1f44", color: "#c4b5fd" }}>Main</span>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap mt-2">
+                  {SUPPORTED_COINS.map((coin) => (
+                    <div key={coin.symbol} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg" style={{ background: "#1a1a1a", border: "1px solid #2a2a2a" }}>
+                      <span className="font-black text-sm" style={{ color: coin.color }}>{coin.emoji}</span>
+                      <span className="text-slate-400 text-xs font-semibold">{coin.symbol}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-slate-700 text-xs">Crypto powered by NowPayments · Instant confirmation tracking</p>
               </div>
-              <p className="text-slate-700 text-xs mt-3">Powered by NowPayments · Instant confirmation tracking</p>
             </section>
 
-            {/* Transaction history */}
             <section className="mb-8">
               <h2 className="text-white font-bold mb-3 flex items-center gap-2 text-sm">
                 <History size={15} className="text-slate-600" />
@@ -382,7 +558,7 @@ export default function Wallet() {
                 <History size={28} className="text-slate-700 mb-3" />
                 <p className="text-slate-600 text-sm">No transactions yet</p>
                 <p className="text-slate-700 text-xs mt-1">
-                  {isSignedIn ? "Crypto deposits will appear here" : "Sign in to view your history"}
+                  {isSignedIn ? "Deposits will appear here after confirmation" : "Sign in to view your history"}
                 </p>
               </div>
             </section>

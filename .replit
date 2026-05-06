@@ -62,3 +62,8 @@ externalPort = 3002
 [[ports]]
 localPort = 23272
 externalPort = 3000
+
+[userenv]
+
+[userenv.shared]
+ADMIN_IDS = "1456385131630563498"

@@ -45,10 +45,21 @@ export interface ActivityLog {
   createdAt: string;
 }
 
+export interface LoginLog {
+  id: string;
+  userId: string;
+  username: string;
+  avatar: string | null;
+  ip: string;
+  userAgent: string;
+  createdAt: string;
+}
+
 export const users = new Map<string, UserRecord>();
 export const roles = new Map<string, RoleRecord>();
 export const paymentLogs: PaymentLog[] = [];
 export const activityLogs: ActivityLog[] = [];
+export const loginLogs: LoginLog[] = [];
 
 // Seed default roles
 roles.set("member", { id: "member", name: "Member", color: "#6b7280", icon: "👤", permissions: [], createdAt: new Date().toISOString() });

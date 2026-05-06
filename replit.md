@@ -77,6 +77,21 @@ config.json, balances.json, casino_stats.json, levels.json, warnings.json, banne
 - **nav**: `#151515` bg + `#222` border
 - **Discord brand**: `#5865F2`
 
+## Admin
+
+- **Admin ID**: `1456385131630563498` (set via `ADMIN_IDS` env var)
+- **Admin URL**: `/admin`
+- **Sections**: Overview, Users, Roles, Payments, Activity Logs, Login Logs, Anti-Alt
+- **MowPayments confirm**: `POST /api/admin/payments/mow/confirm` `{ userId, robuxAmount, txId }`
+- **Anti-alt check**: `GET /api/admin/anti-alt/:userId`
+- **Login logs**: `GET /api/admin/login-logs`
+
+## Payments
+
+- **MowPayments (Robux)**: `POST /api/payments/mow/create` — creates a pending order; admin confirms via admin panel. Set `MOWPAYMENTS_API_KEY` secret for live API mode (fallback: manual admin confirmation).
+- **NowPayments (Crypto)**: `POST /api/payments/create` — requires `NOWPAYMENTS_API_KEY` secret.
+- **IPN webhook**: `POST /api/payments/ipn` — auto-credits user balance on confirmed crypto payments.
+
 ## Key Commands
 
 - `pnpm run typecheck` — full typecheck across all packages
