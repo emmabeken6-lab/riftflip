@@ -31,7 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUser = async () => {
     try {
-      const res = await fetch("/api/auth/me", { credentials: "include" });
+      const res = await fetch("/api/auth/me", { credentials: "include", cache: "no-store" });
       const data = await res.json() as { user: DiscordUser | null };
       setUser(data.user);
     } catch {

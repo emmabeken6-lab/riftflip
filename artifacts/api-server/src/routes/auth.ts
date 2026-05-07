@@ -62,6 +62,7 @@ router.get(
 );
 
 router.get("/auth/me", (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
   if (req.isAuthenticated() && req.user) {
     res.json({ user: req.user });
   } else {
